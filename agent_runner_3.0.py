@@ -94,7 +94,7 @@ def git_sync():
         
 def create_branch(user_request):
     safe = slugify(user_request)
-    branch = f"{safe}-{int(time.time())}"
+    branch = f"feat/{safe}-{int(time.time())}"
 
     subprocess.run(["git", "checkout", "-b", branch], check=False)
     print(f"🌿 Branch: {branch}")
