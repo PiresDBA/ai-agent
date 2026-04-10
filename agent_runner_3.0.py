@@ -256,7 +256,15 @@ No explanations.
     agent=fix_agent
 )
 
-    Crew(agents=[fix_agent], tasks=[fix_task]).kickoff()
+    fix_crew = Crew(agents=[fix_agent], 
+    tasks=[fix_task])
+    result = fix_crew.kickoff()
+
+    fixed_code = str(result)
+
+    if len(fixed_code.strip()) > 20:
+       with open("generated.py", "w", encoding="utf-8") as f:
+        f.write(fixed_code)
 
     git_commit_and_push(branch, user_request)
 
