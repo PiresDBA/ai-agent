@@ -84,6 +84,14 @@ def build_search_query(user_request, stack):
 # =========================
 # GIT
 # =========================
+
+def git_sync():
+    try:
+        subprocess.run(["git", "pull", "--rebase", "origin", "main"], check=False)
+        print("🔄 Repo sincronizado")
+    except:
+        print("⚠️ Falha ao sincronizar")
+        
 def create_branch(user_request):
     safe = slugify(user_request)
     branch = f"{safe}-{int(time.time())}"
@@ -202,6 +210,7 @@ Rules:
 # =========================
 # GIT START
 # =========================
+git_sync()
 branch = create_branch(user_request)
 
 # =========================
