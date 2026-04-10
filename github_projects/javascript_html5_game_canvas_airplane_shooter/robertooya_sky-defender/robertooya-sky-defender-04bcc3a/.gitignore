@@ -1,0 +1,9 @@
+# Excel files
+*.xlsx
+~$*.xlsx
+
+# macOS
+.DS_Store
+
+# Claude settings (local only)
+.claude/settings.local.json
