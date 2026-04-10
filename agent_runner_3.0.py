@@ -244,9 +244,17 @@ for attempt in range(MAX_ATTEMPTS):
 
     # FIX
     fix_task = Task(
-        description=f"Fix this error:\n{stderr}",
-        agent=fix_agent
-    )
+    description=f"""
+Fix the following error:
+
+{stderr}
+
+Return ONLY the corrected code.
+No explanations.
+""",
+    expected_output="Corrected code",
+    agent=fix_agent
+)
 
     Crew(agents=[fix_agent], tasks=[fix_task]).kickoff()
 
