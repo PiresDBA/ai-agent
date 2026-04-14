@@ -1,0 +1,31 @@
+antigravity/
+│
+├── api/
+│   └── main.py
+│
+├── core/
+│   ├── llm.py
+│   ├── orchestrator.py
+│   ├── memory.py
+│
+├── engine/
+│   ├── pipeline.py
+│   ├── executor.py
+│   ├── security.py
+│   ├── quality.py
+│   ├── autofix.py
+│
+├── agents/
+│   ├── agent_a_game.py
+│   ├── agent_b_saas.py
+│   ├── agent_c_dev.py
+│   ├── security_agent.py
+│   ├── quality_agent.py
+│
+├── tools/
+│   ├── github_fetcher.py
+│   ├── git_manager.py
+│   ├── site_cloner.py
+│
+├── main.py
+├── requirements.txt
