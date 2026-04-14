@@ -9,7 +9,7 @@ from github_fetcher import github_fetch
 # CONFIG
 # =========================
 DEV_LLM = "ollama/gemma4:e4b"
-FIX_LLM = "ollama/qwen3.5:4b"
+FIX_LLM = "ollama/gemma4:e4b"
 MAX_ATTEMPTS = 3
 
 # =========================
@@ -18,7 +18,7 @@ MAX_ATTEMPTS = 3
 def slugify(text):
     text = text.lower().strip()
 
-    replacements = {
+    rep = {
         "ã":"a","á":"a","à":"a",
         "é":"e","ê":"e",
         "í":"i",
@@ -27,7 +27,7 @@ def slugify(text):
         "ç":"c"
     }
 
-    for k,v in replacements.items():
+    for k,v in rep.items():
         text = text.replace(k,v)
 
     text = text.replace(" ", "-")
@@ -53,13 +53,13 @@ def detect_stack(user_request):
     return "python"
 
 # =========================
-# BUILD SEARCH QUERY
+# BUILD QUERY
 # =========================
 def build_search_query(user_request, stack):
     text = user_request.lower()
 
     if stack == "pwa_game":
-        keywords = ["javascript", "html5", "game", "pwa", "service-worker"]
+        keywords = ["javascript", "html5", "game", "pwa"]
 
     elif stack == "web_game":
         keywords = ["javascript", "html5", "game", "canvas"]
@@ -73,25 +73,17 @@ def build_search_query(user_request, stack):
     if "avião" in text or "aviao" in text:
         keywords.append("airplane")
 
-    if "tiro" in text or "shooter" in text:
+    if "tiro" in text:
         keywords.append("shooter")
-
-    if "corrida" in text:
-        keywords.append("racing")
 
     return " ".join(keywords)
 
 # =========================
 # GIT
 # =========================
-
 def git_sync():
-    try:
-        subprocess.run(["git", "pull", "--rebase", "origin", "main"], check=False)
-        print("🔄 Repo sincronizado")
-    except:
-        print("⚠️ Falha ao sincronizar")
-        
+    subprocess.run(["git", "pull", "--rebase", "origin", "main"], check=False)
+
 def create_branch(user_request):
     safe = slugify(user_request)
     branch = f"feat/{safe}-{int(time.time())}"
@@ -103,10 +95,10 @@ def create_branch(user_request):
 def git_commit_and_push(branch, user_request):
     try:
         safe = slugify(user_request)
-        tag = f"{safe}-{int(time.time())}"
+        tag = f"v-{safe}-{int(time.time())}"
 
         subprocess.run(["git", "add", "."], check=False)
-        subprocess.run(["git", "commit", "-m", f"{user_request}"], check=False)
+        subprocess.run(["git", "commit", "-m", user_request], check=False)
         subprocess.run(["git", "tag", tag], check=False)
         subprocess.run(["git", "push", "-u", "origin", branch], check=False)
         subprocess.run(["git", "push", "--tags"], check=False)
@@ -119,9 +111,9 @@ def git_commit_and_push(branch, user_request):
 # AGENTES
 # =========================
 dev_agent = Agent(
-    role="Senior Developer",
+    role="Developer",
     goal="Generate working code",
-    backstory="Expert developer",
+    backstory="Expert dev",
     llm=DEV_LLM,
     verbose=True
 )
@@ -129,7 +121,7 @@ dev_agent = Agent(
 fix_agent = Agent(
     role="Debugger",
     goal="Fix errors",
-    backstory="Expert in debugging",
+    backstory="Expert debugger",
     llm=FIX_LLM,
     verbose=True
 )
@@ -142,35 +134,53 @@ user_request = input("💬 O que você quer criar? ")
 stack = detect_stack(user_request)
 search_query = build_search_query(user_request, stack)
 
-print(f"🧠 Stack detectada: {stack}")
-print(f"🔎 Busca: {search_query}")
+print(f"🧠 Stack: {stack}")
+print(f"🔎 Query: {search_query}")
 
 # =========================
-# BUSCA GITHUB
+# BUSCA
 # =========================
-github_fetch(search_query)
+folders = github_fetch(search_query)
 
-base_folder = os.path.join("github_projects", search_query.replace(" ", "_"))
+print("DEBUG folders:", folders)
 
-# =========================
-# ENCONTRAR PROJETO
-# =========================
-def find_project_folder(base):
-    for root, dirs, files in os.walk(base):
-        if "index.html" in files:
-            return root
-    return base
-
-project_path = find_project_folder(base_folder)
+if not folders:
+    print("⚠️ Nenhum repositório encontrado")
+    folders = []
 
 # =========================
-# EXECUÇÃO
+# ESCOLHER PROJETO
+# =========================
+def find_best_project(folders):
+    if not folders:
+        return None
+
+    for folder in folders:
+        for root, dirs, files in os.walk(folder):
+            if "index.html" in files:
+                return root
+
+    for folder in folders:
+        for root, dirs, files in os.walk(folder):
+            for f in files:
+                if f.endswith(".py"):
+                    return root
+
+    return None
+
+project_path = find_best_project(folders)
+
+# =========================
+# EXECUTAR
 # =========================
 def run_project(path):
+    if not path:
+        return "", "Sem projeto"
+
     index = os.path.join(path, "index.html")
 
     if os.path.exists(index):
-        print("🌐 Abrindo no navegador...")
+        print("🌐 Abrindo navegador...")
         os.startfile(index)
         return "", ""
 
@@ -182,30 +192,20 @@ def run_project(path):
                 text=True
             )
 
-    return "", "Nenhum executável"
+    return "", "Nada executável"
 
 # =========================
-# FALLBACK IA
+# IA FALLBACK
 # =========================
 def generate_with_ai():
     task = Task(
-        description=f"""
-Create a project based on:
-
-{user_request}
-
-Rules:
-- Use best language
-- Prefer PWA if game
-- Output only code
-""",
+        description=f"Create project: {user_request}",
+        expected_output="Code",
         agent=dev_agent
     )
 
     crew = Crew(agents=[dev_agent], tasks=[task])
-    result = crew.kickoff()
-
-    return str(result)
+    return str(crew.kickoff())
 
 # =========================
 # GIT START
@@ -214,10 +214,10 @@ git_sync()
 branch = create_branch(user_request)
 
 # =========================
-# SE NÃO TEM PROJETO
+# FALLBACK
 # =========================
-if not os.listdir(base_folder):
-    print("⚠️ Nada no GitHub. Gerando com IA...")
+if not project_path:
+    print("⚠️ Nenhum projeto válido. IA...")
     code = generate_with_ai()
 
     with open("generated.py", "w") as f:
@@ -242,29 +242,14 @@ for attempt in range(MAX_ATTEMPTS):
 
     print("❌ ERRO:", stderr)
 
-    # FIX
     fix_task = Task(
-    description=f"""
-Fix the following error:
+        description=f"Fix error:\n{stderr}",
+        expected_output="Fixed code",
+        agent=fix_agent
+    )
 
-{stderr}
-
-Return ONLY the corrected code.
-No explanations.
-""",
-    expected_output="Corrected code",
-    agent=fix_agent
-)
-
-    fix_crew = Crew(agents=[fix_agent], 
-    tasks=[fix_task])
-    result = fix_crew.kickoff()
-
-    fixed_code = str(result)
-
-    if len(fixed_code.strip()) > 20:
-       with open("generated.py", "w", encoding="utf-8") as f:
-        f.write(fixed_code)
+    fix_crew = Crew(agents=[fix_agent], tasks=[fix_task])
+    fix_crew.kickoff()
 
     git_commit_and_push(branch, user_request)
 

@@ -1,68 +1,63 @@
 import requests
+import os
 import zipfile
 import io
-import os
 
-GITHUB_API = "https://api.github.com/search/repositories"
+def github_fetch(query):
+    print("🔎 Buscando no GitHub...")
 
-def search_github(query, max_repos=3):
+    url = "https://api.github.com/search/repositories"
+
     params = {
         "q": query,
         "sort": "stars",
         "order": "desc",
-        "per_page": max_repos
+        "per_page": 3
     }
 
-    response = requests.get(GITHUB_API, params=params)
+    response = requests.get(url, params=params)
+
+    if response.status_code != 200:
+        print("❌ Erro API GitHub:", response.status_code)
+        print(response.text)
+        return []
+
     data = response.json()
 
-    repos = []
+    items = data.get("items", [])
+    print("📦 Repos encontrados:", len(items))
 
-    for item in data.get("items", []):
-        repos.append({
-            "name": item["name"],
-            "full_name": item["full_name"],
-            "zip_url": item["archive_url"].replace("{archive_format}{/ref}", "zipball"),
-        })
+    base_folder = "github_projects"
+    os.makedirs(base_folder, exist_ok=True)
 
-    return repos
+    folders = []
 
+    for item in items:
+        repo_name = item.get("name", "repo_sem_nome")
+        owner = item.get("owner", {}).get("login", "")
 
-def download_and_extract(repo, base_folder):
-    repo_name = repo["full_name"].replace("/", "_")
-    folder_path = os.path.join(base_folder, repo_name)
+        # 🔥 NOVO: construir URL manualmente (100% confiável)
+        zip_url = f"https://api.github.com/repos/{owner}/{repo_name}/zipball"
 
-    if not os.path.exists(folder_path):
-        os.makedirs(folder_path)
+        folder = os.path.join(base_folder, repo_name)
 
-    print(f"📥 Baixando {repo['full_name']}...")
+        print(f"⬇️ Baixando: {repo_name}")
 
-    response = requests.get(repo["zip_url"])
+        try:
+            r = requests.get(zip_url)
 
-    z = zipfile.ZipFile(io.BytesIO(response.content))
-    z.extractall(folder_path)
+            if r.status_code != 200:
+                print(f"⚠️ Falha download: {repo_name}")
+                continue
 
-    print(f"✅ Extraído em {folder_path}")
+            z = zipfile.ZipFile(io.BytesIO(r.content))
+            z.extractall(folder)
 
+            folders.append(folder)
 
-def github_fetch(query):
-    base_folder = os.path.join("github_projects", query.replace(" ", "_"))
+        except Exception as e:
+            print(f"⚠️ Erro ao extrair {repo_name}:", e)
 
-    if not os.path.exists(base_folder):
-        os.makedirs(base_folder)
+    print("🎉 Download concluído!")
 
-    repos = search_github(query)
-
-    for repo in repos:
-        download_and_extract(repo, base_folder)
-
-    print("\n🎉 Download concluído!")
-
-
-# =====================
-# EXECUÇÃO
-# =====================
-
-if __name__ == "__main__":
-    query = input("🔎 O que você quer buscar no GitHub? ")
-    github_fetch(query)
+    return folders
