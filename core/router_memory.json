@@ -1,0 +1,106 @@
+{
+  "faca um app de calcular tempo e espaco entrte planetas": {
+    "route": "B",
+    "count": 1
+  },
+  "app de namoro entre gente e bicho": {
+    "route": "B",
+    "count": 1
+  },
+  "crie um jogo snake simples em python": {
+    "route": "A",
+    "count": 1
+  },
+  "crie um jogo tipo mario": {
+    "route": "A",
+    "count": 1
+  },
+  "jogo tipo mario": {
+    "route": "A",
+    "count": 1
+  },
+  "jogo tipo mario com riquezasem detalhe, pode ser pwa, hml5. javascript e phyton, mas tem que ser rico emdetalhes com varias telas coloridas e varios personagens, jogo profissional mesmo": {
+    "route": "A",
+    "count": 1
+  },
+  "jogo tipo mario, com riqueza de detalhes no minimo 20 fases diferente, com varios personaens iinfantis, usando todos os recurosos possiveis, motores ja existens par evitar uso de tokesn desnescessario": {
+    "route": "A",
+    "count": 1
+  },
+  "crie um jogo simples do mario em pygame": {
+    "route": "A",
+    "count": 1
+  },
+  "crie um site simples fastapi de todo list": {
+    "route": "B",
+    "count": 1
+  },
+  "crie um script automacao de listar pastas rodando crewai (apenas setup)": {
+    "route": "C",
+    "count": 1
+  },
+  "pygame mario clone": {
+    "route": "A",
+    "count": 1
+  },
+  "kanban board react app": {
+    "route": "B",
+    "count": 1
+  },
+  "crewai orchestrator python": {
+    "route": "B",
+    "count": 1
+  },
+  "simple snake game with pygame": {
+    "route": "A",
+    "count": 1
+  },
+  "script to list files in current dir": {
+    "route": "C",
+    "count": 1
+  },
+  "simple notes api fastapi": {
+    "route": "B",
+    "count": 1
+  },
+  "professional script to monitor battery and system cpu usage, logging to csv with proper rotating logs and error handling": {
+    "route": "C",
+    "count": 1
+  },
+  "crie um jogo de tiro profissonal estilo cownter strike usando motores profissionais": {
+    "route": "A",
+    "count": 1
+  },
+  "jogo tipo counter strike, tde tiro primeira pessoa usando motor unreal tournament com viausl profissional e alta definicao de som e image": {
+    "route": "A",
+    "count": 1
+  },
+  "crie um app para compra e vendas de produtos online tipo olx, mas com pagina web fornt end e backend": {
+    "route": "B",
+    "count": 1
+  },
+  "criar um site tipo olx.com.br com frontend e backend para icnluir produtos, ocompra e venda, chat, e tudo que tem direito": {
+    "route": "B",
+    "count": 1
+  },
+  "criar um site tipo olx.com.br com frontend e backend para incluir produtos, compra e venda, chat. imagens dos produtos, etc.": {
+    "route": "B",
+    "count": 1
+  },
+  "crie um jogo snake em html5 super polido com placar de pontos.": {
+    "route": "A",
+    "count": 1
+  },
+  "me monte uma planilha com os valores das 20 acoes que mais suboram hoje": {
+    "route": "C",
+    "count": 1
+  },
+  "verifique quais as acoes na bolsa de sao pauo que mais subiram hoje e monte umrelatorio": {
+    "route": "B",
+    "count": 1
+  },
+  "quais as principais noticias de hoje? me faça um relatório completo": {
+    "route": "B",
+    "count": 1
+  }
+}

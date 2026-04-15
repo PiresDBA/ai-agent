@@ -1,22 +1,24 @@
-# Python
+# Byte-compiled / optimized / DLL files
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*$py.class
 
-# Virtual env (ESSENCIAL)
-.venv/
-venv/
-
-# Logs
+# Data & Logs
+logs/
+data/
 *.log
 
-# IDE
-.vscode/
-.idea/
+# Workspace & External Projects
+workspace/
+github_projects/
+
+# Environment
+.env
+.venv
+env/
+venv/
+ENV/
 
 # OS
 .DS_Store
 Thumbs.db
-
-# Cache
-.cache/

@@ -1,4 +1,4 @@
-```python
+
 #!/usr/bin/env python3
 
 import sys
@@ -13,4 +13,3 @@ try:
 except Exception as e:
     print(f"Error: {e}")
     sys.exit(1)
-```

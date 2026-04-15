@@ -1,75 +1,61 @@
-from core.llm import ask
-import json
+"""
+Git Manager — Sincronização automática com repositório Git.
+"""
 import subprocess
+import os
 
-import subprocess
 
-def git_sync(message="auto sync"):
+def git_sync(message: str = "auto: agent task commit") -> bool:
+    """
+    Faz git add, commit e push do projeto.
+
+    Returns:
+        True se sucesso, False se falhou.
+    """
     try:
-        subprocess.run(["git", "add", "."], check=True)
+        # Verifica se está num repo git
+        check = subprocess.run(
+            ["git", "rev-parse", "--git-dir"],
+            capture_output=True, text=True, timeout=10
+        )
+        if check.returncode != 0:
+            print("⚠️ Não é um repositório Git")
+            return False
 
+        # Add
+        subprocess.run(["git", "add", "."], check=True, timeout=15)
+
+        # Commit
         commit = subprocess.run(
-            ["git", "commit", "-m", message],
-            capture_output=True,
-            text=True
+            ["git", "commit", "-m", message[:200]],  # limita tamanho da mensagem
+            capture_output=True, text=True, timeout=15
         )
 
         if "nothing to commit" in commit.stdout.lower():
-            print("⚠️ Nada para commit")
-            return
+            print("ℹ️  Git: nada para commitar")
+            return True
 
-        subprocess.run(["git", "push"], check=True)
+        if commit.returncode != 0:
+            print(f"⚠️ Git commit falhou: {commit.stderr[:200]}")
+            return False
 
-        print("✅ Git sync OK")
+        # Push
+        push = subprocess.run(
+            ["git", "push"],
+            capture_output=True, text=True, timeout=30
+        )
+
+        if push.returncode == 0:
+            print("✅ Git sync OK")
+            return True
+        else:
+            print(f"⚠️ Git push falhou: {push.stderr[:200]}")
+            return False
+
+    except subprocess.TimeoutExpired:
+        print("⚠️ Git timeout")
+        return False
 
     except Exception as e:
-        print("❌ Git error:", e)
-        
-def decide(user):
-    prompt = f"""
-Analise o pedido do usuário:
-
-"{user}"
-
-Classifique corretamente:
-
-type:
-- game
-- web_app
-- clone_site
-- automation
-- search
-
-strategy:
-- github
-- clone
-- build
-- research
-
-REGRAS IMPORTANTES:
-- Só use "clone_site" se houver uma URL clara (http/https)
-- Para jogos ou apps, prefira "github"
-- Para perguntas, use "search"
-
-Responda SOMENTE JSON válido, sem explicações.
-NUNCA use markdown.
-NUNCA use texto extra.
-NUNCA use explicações.
-Se não souber, responda:
-{"type":"search","strategy":"research"}
-Exemplo:
-{{"type": "game", "strategy": "github"}}
-"""
-
-    res = ask("manager_agent", prompt)
-
-    try:
-        return json.loads(res)
-    except Exception:
-        print("⚠️ Erro interpretando decisão do LLM:", res)
-
-    # fallback seguro
-    return {
-        "type": "search",
-        "strategy": "research"
-    }
+        print(f"⚠️ Git erro: {e}")
+        return False

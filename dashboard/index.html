@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>💎 Diamond Agent Factory</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+<!-- Remarkable for Markdown parsing -->
+<script src="https://cdn.jsdelivr.net/npm/remarkable@2.0.1/dist/remarkable.min.js"></script>
+<style>
+  :root {
+    --bg-dark: #050505;
+    --bg-sidebar: #0a0a0c;
+    --bg-card: #0f1115;
+    --bg-input: #161b22;
+    --border: #30363d;
+    --border-light: #484f58;
+    --text-primary: #f0f6fc;
+    --text-secondary: #8b949e;
+    --accent: #79c0ff;
+    --accent-glow: rgba(121, 192, 255, 0.25);
+    --diamond: linear-gradient(135deg, #b3d9ff 0%, #ffffff 50%, #79c0ff 100%);
+    --gradient-primary: linear-gradient(135deg, #1f6feb 0%, #79c0ff 100%);
+    --shadow-soft: 0 10px 40px rgba(0,0,0,0.6);
+    --radius: 12px;
+  }
+  
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body { 
+    font-family: 'Inter', sans-serif; 
+    background: var(--bg-dark); 
+    background-image: 
+      radial-gradient(circle at 20% 20%, rgba(31, 111, 235, 0.05) 0%, transparent 40%),
+      radial-gradient(circle at 80% 80%, rgba(121, 192, 255, 0.05) 0%, transparent 40%);
+    color: var(--text-primary); 
+    height: 100vh; 
+    display: flex; 
+    overflow: hidden; 
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 280px;
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+  }
+  
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-weight: 900;
+    font-size: 1.2rem;
+    padding: 0.5rem;
+    margin-bottom: 2.5rem;
+    background: var(--diamond);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+  }
+  
+  .brand svg {
+    fill: url(#grad1);
+    width: 24px;
+    height: 24px;
+  }
+
+  .new-chat-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 12px;
+    background: var(--bg-input);
+    color: var(--text-primary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    margin-bottom: 2rem;
+  }
+
+  .new-chat-btn:hover {
+    background: #3f3f46;
+    transform: translateY(-1px);
+  }
+
+  .history-list {
+    flex: 1;
+    overflow-y: auto;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .history-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+  }
+  
+  .history-item:hover {
+    background: var(--bg-input);
+    color: var(--text-primary);
+    border-color: var(--border);
+  }
+
+  .history-content {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding-right: 8px;
+  }
+
+  .history-actions {
+    display: none;
+    gap: 6px;
+  }
+
+  .history-item:hover .history-actions {
+    display: flex;
+  }
+
+  .action-icon {
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    opacity: 0.7;
+  }
+
+  .action-icon:hover {
+    background: var(--border);
+    opacity: 1;
+    transform: scale(1.1);
+  }
+
+  .action-del:hover { color: #f87171; }
+  .action-ref:hover { color: var(--accent); }
+
+  .system-stats {
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  
+  .stat-box {
+    background: var(--bg-card);
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    text-align: center;
+  }
+  
+  .stat-val { font-weight: 700; color: var(--accent); font-size: 0.9rem; }
+
+  /* MAIN PANEL */
+  .main-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    max-width: 100%;
+  }
+
+  .chat-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    scroll-behavior: smooth;
+  }
+
+  /* MESSAGES */
+  .message {
+    display: flex;
+    gap: 16px;
+    max-width: 800px;
+    margin: 0 auto;
+    width: 100%;
+    opacity: 0;
+    transform: translateY(10px);
+    animation: fadeIn 0.4s forwards ease-out;
+  }
+
+  @keyframes fadeIn {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .avatar-user { background: var(--bg-input); border: 1px solid var(--border-light); }
+  .avatar-ai { background: var(--gradient-primary); color: white; box-shadow: 0 0 15px var(--accent-glow); }
+
+  .msg-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .user-text {
+    font-size: 1rem;
+    line-height: 1.6;
+    padding-top: 6px;
+  }
+
+  /* AGENT UI ELEMENTS */
+  .agent-status-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-top: 8px;
+    box-shadow: var(--shadow-soft);
+  }
+
+  .status-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  .spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(56, 189, 248, 0.2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .log-console {
+    background: #000;
+    border-radius: 8px;
+    padding: 12px;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.85rem;
+    color: #8be9fd;
+    max-height: 250px;
+    overflow-y: auto;
+    border: 1px solid #1e1e24;
+  }
+  
+  .log-line {
+    margin-bottom: 4px;
+    line-height: 1.4;
+  }
+  .log-line.error { color: #ff5555; }
+  .log-line.success { color: #50fa7b; }
+  .log-line.warning { color: #f1fa8c; }
+
+  /* RESULT CARD */
+  .result-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .result-metric {
+    background: var(--bg-input);
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  
+  .metric-label { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .metric-val { font-size: 1.2rem; font-weight: 700; color: #fff; }
+  .metric-val.success { color: #4ade80; }
+
+  /* INPUT AREA */
+  .input-container {
+    padding: 20px 40px;
+    background: linear-gradient(180deg, transparent 0%, var(--bg-dark) 20%);
+  }
+
+  .input-box {
+    max-width: 800px;
+    margin: 0 auto;
+    position: relative;
+    background: var(--bg-input);
+    border: 1px solid var(--border-light);
+    border-radius: 16px;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    transition: border-color 0.3s;
+  }
+  
+  .input-box:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 20px var(--accent-glow);
+  }
+
+  textarea {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-family: inherit;
+    resize: none;
+    min-height: 24px;
+    max-height: 150px;
+    padding: 12px 0;
+    line-height: 1.5;
+  }
+  
+  textarea:focus { outline: none; }
+
+  .send-btn {
+    background: var(--text-primary);
+    color: var(--bg-dark);
+    border: none;
+    border-radius: 10px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-left: 12px;
+  }
+  
+  .send-btn:hover { background: var(--accent); color: white; transform: scale(1.05); }
+  .send-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .send-btn svg { width: 16px; height: 16px; fill: currentColor; }
+
+  /* SIDE PANEL - FILES VIEWER */
+  .side-panel {
+    width: 0;
+    background: var(--bg-sidebar);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
+  }
+  
+  .side-panel.open { width: 450px; }
+
+  .panel-header {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .panel-title { font-weight: 600; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;}
+  
+  .close-panel {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px;
+  }
+  .close-panel:hover { color: white; }
+
+  .file-tabs {
+    display: flex;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-dark);
+  }
+  
+  .file-tabs::-webkit-scrollbar { height: 4px; }
+  .file-tabs::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px; }
+
+  .tab {
+    padding: 12px 16px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 500;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .tab:hover { color: white; background: #1e1e24; }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); background: var(--bg-sidebar); }
+
+  .file-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+    background: #000;
+    position: relative;
+  }
+  
+  .code-viewer {
+    margin: 0;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.85rem;
+    color: #e2e8f0;
+    padding: 20px;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .markdown-body {
+    padding: 24px;
+    font-family: 'Inter', sans-serif;
+    color: #e2e8f0;
+    line-height: 1.6;
+    font-size: 0.95rem;
+  }
+  .markdown-body h1, .markdown-body h2, .markdown-body h3 { color: #fff; margin-top: 1.5em; margin-bottom: 0.5em; }
+  .markdown-body h1 { font-size: 1.8rem; margin-top: 0; border-bottom: 1px solid var(--border-light); padding-bottom: 10px; }
+  .markdown-body ul, .markdown-body ol { margin-left: 1.5em; margin-bottom: 1em; }
+  .markdown-body code { background: #1e1e24; padding: 2px 6px; border-radius: 4px; font-family: 'Fira Code', monospace; font-size: 0.85em; color: var(--accent); }
+  .markdown-body pre code { background: transparent; padding: 0; color: inherit;}
+  .markdown-body pre { background: #000; padding: 16px; border-radius: 8px; overflow-x: auto; border: 1px solid var(--border); margin-bottom: 1em; }
+
+  .open-files-btn {
+    margin-top: 16px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-light);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+  }
+  .open-files-btn:hover {
+    background: #3f3f46;
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 1024px) {
+    .side-panel.open { width: 350px; }
+  }
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .side-panel { position: absolute; right: 0; top: 0; bottom: 0; z-index: 100; }
+    .side-panel.open { width: 100%; }
+    .input-box { max-width: 100%; }
+    .input-container { padding: 16px; }
+    .chat-container { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- SVG DEFS -->
+  <svg style="display:none">
+    <defs>
+      <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#4f46e5;stop-opacity:1" />
+        <stop offset="100%" style="stop-color:#38bdf8;stop-opacity:1" />
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <aside class="sidebar">
+    <div class="brand">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+      Agent Platform
+    </div>
+    
+    <button class="new-chat-btn" onclick="location.reload()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      Novo Projeto
+    </button>
+    
+    <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:8px; font-weight:600; text-transform:uppercase; letter-spacing:1px">Projetos Recentes</div>
+    <ul class="history-list" id="historyList">
+      <!-- Injected via API -->
+    </ul>
+    
+    <div class="system-stats">
+      <div class="stat-box">
+        <div class="stat-val" id="statRate">--</div>
+        Sucesso
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" id="statScore">--</div>
+        Qualidade
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-panel">
+    <div class="chat-container" id="chatArea">
+      
+      <!-- Welcome Message -->
+      <div class="message" id="welcomeMsg">
+        <div class="avatar avatar-ai">D</div>
+        <div class="msg-content">
+          <div class="user-text">
+            <h2>Bem-vindo à Fábrica Elite Diamond</h2>
+            <p style="color:var(--text-secondary); margin-top:8px">O sistema foi elevado ao nível <strong>Diamond Professional</strong>. Agora geramos apenas código de alta performance, documentado e com arquitetura industrial.</p>
+            <div style="display:flex; gap:12px; margin-top:20px; flex-wrap:wrap">
+              <button class="open-files-btn" onclick="setInput('Crie um jogo Snake em HTML5 super polido com placar de pontos.')" style="margin:0; font-size:0.85rem">🐍 Jogo Snake</button>
+              <button class="open-files-btn" onclick="setInput('Crie um script automotizado que lê um CSV e gera gráficos de evolução num arquivo PDF.')" style="margin:0; font-size:0.85rem">📊 Script de Dados</button>
+              <button class="open-files-btn" onclick="setInput('Construa um app de gestão de tarefas em FastAPI com Kanban Board completo.')" style="margin:0; font-size:0.85rem">📝 App Kanban</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="input-container">
+      <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+        <select id="llmSelect" style="background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-light); padding:4px 8px; border-radius:6px; font-size:0.8rem; cursor:pointer; min-width: 150px;">
+          <option value="">🔮 LLM Automático</option>
+        </select>
+        <select id="modeSelect" style="background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-light); padding:4px 8px; border-radius:6px; font-size:0.8rem; cursor:pointer;">
+          <option value="fast">🚀 Modo Rápido (Fast)</option>
+          <option value="planning">🧠 Modo Planejamento</option>
+        </select>
+      </div>
+      <div class="input-box">
+        <textarea id="promptInput" rows="1" placeholder="Descreva o aplicativo, jogo ou automação que você quer criar..."></textarea>
+        <button class="send-btn" id="sendBtn" onclick="submitTask()">
+          <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </div>
+      <div style="font-size:0.7rem; color:var(--text-secondary); text-align:center; margin-top:12px">
+        Respostas e códigos gerados podem conter imprecisões e dependem do modelo Ollama atual. O sistema faz auto-correções para garantir que rode.
+      </div>
+    </div>
+  </main>
+
+  <aside class="side-panel" id="sidePanel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
+        Arquivos do Projeto
+      </div>
+      <button class="close-panel" onclick="closeSidebar()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div class="file-tabs" id="fileTabs"></div>
+    <div class="file-content" id="fileContent">
+      <pre class="code-viewer" id="codeViewer" style="display:none"></pre>
+      <div class="markdown-body" id="mdViewer" style="display:none"></div>
+    </div>
+  </aside>
+
+<script>
+  let currentProjectData = null;
+  async function loadModels() {
+    try {
+      const res = await fetch('/models');
+      const data = await res.json();
+      const sel = document.getElementById('llmSelect');
+      sel.innerHTML = '<option value="">🔮 Diamond Auto-Select</option>';
+      
+      if (data.models) {
+        const locals = data.models.filter(m => m.category === 'Diamond Local');
+        const clouds = data.models.filter(m => m.category === 'Diamond Cloud');
+        
+        if (locals.length) {
+          const group = document.createElement('optgroup');
+          group.label = '🏠 LOCAL DIAMOND';
+          locals.forEach(m => {
+             const opt = document.createElement('option');
+             opt.value = m.name;
+             opt.textContent = m.name;
+             group.appendChild(opt);
+          });
+          sel.appendChild(group);
+        }
+        
+        if (clouds.length) {
+          const group = document.createElement('optgroup');
+          group.label = '🌐 CLOUD DIAMOND (MiniMax M2 Series)';
+          clouds.forEach(m => {
+             const opt = document.createElement('option');
+             opt.value = m.name;
+             opt.textContent = m.name + (m.is_pulled ? ' (Pronto)' : ' (Cloud/Auto-Pull)');
+             group.appendChild(opt);
+          });
+          sel.appendChild(group);
+        }
+      }
+    } catch(e) { console.error("Error fetching models", e); }
+  }
+  loadModels();
+  const mdParser = new remarkable.Remarkable({ html: true, xhtmlOut: true, breaks: true });
+
+  // Adjust textarea height automatically
+  const promptInput = document.getElementById('promptInput');
+  promptInput.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = (this.scrollHeight < 150 ? this.scrollHeight : 150) + 'px';
+  });
+
+  promptInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      submitTask();
+    }
+  });
+
+  function setInput(txt) {
+    promptInput.value = txt;
+    promptInput.focus();
+    promptInput.dispatchEvent(new Event('input'));
+  }
+
+  function appendUserMessage(text) {
+    const chatArea = document.getElementById('chatArea');
+    const msg = document.createElement('div');
+    msg.className = 'message';
+    msg.innerHTML = `
+      <div class="avatar avatar-user">U</div>
+      <div class="msg-content">
+        <div class="user-text">${text}</div>
+      </div>
+    `;
+    chatArea.appendChild(msg);
+    msg.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function createAiWorkspace() {
+    const chatArea = document.getElementById('chatArea');
+    const msgId = 'ai_msg_' + Date.now();
+    const msg = document.createElement('div');
+    msg.className = 'message';
+    msg.id = msgId;
+    msg.innerHTML = `
+      <div class="avatar avatar-ai">A</div>
+      <div class="msg-content">
+        <div class="agent-status-card">
+          <div class="status-header">
+            <div class="spinner" id="spinner_${msgId}"></div>
+            <span id="title_${msgId}">Planejando e Construindo...</span>
+            <div id="actions_${msgId}" style="display:none; margin-left:auto; display:flex; gap:8px;">
+              <button id="stopBtn_${msgId}" style="background:#ef4444; color:white; border:none; padding:6px 12px; border-radius:6px; font-size:0.75rem; cursor:pointer; font-weight:600;" onmouseover="this.style.background='#dc2626'" onmouseout="this.style.background='#ef4444'">🛑 PARAR</button>
+              <button id="restartBtn_${msgId}" style="background:#f59e0b; color:white; border:none; padding:6px 12px; border-radius:6px; font-size:0.75rem; cursor:pointer; font-weight:600;" onmouseover="this.style.background='#d97706'" onmouseout="this.style.background='#f59e0b'">🔄 REINICIAR</button>
+            </div>
+          </div>
+          <div class="log-console" id="logs_${msgId}"></div>
+          <div id="result_${msgId}" style="display:none"></div>
+        </div>
+      </div>
+    `;
+    chatArea.appendChild(msg);
+    msg.scrollIntoView({ behavior: 'smooth' });
+    return msgId;
+  }
+
+  async function submitTask() {
+    const prompt = promptInput.value.trim();
+    if (!prompt) return;
+
+    document.getElementById('welcomeMsg').style.display = 'none';
+
+    promptInput.value = '';
+    promptInput.style.height = 'auto';
+    document.getElementById('sendBtn').disabled = true;
+
+    appendUserMessage(prompt);
+    const msgId = createAiWorkspace();
+    const logsEl = document.getElementById(`logs_${msgId}`);
+    
+    const addLog = (text) => {
+      let cls = '';
+      const textLower = text.toLowerCase();
+      if (textLower.includes('erro') || textLower.includes('falhou') || textLower.includes(' timeout')) cls = 'error';
+      else if (textLower.includes('sucesso') || textLower.includes('✅')) cls = 'success';
+      else if (textLower.includes('⚠️')) cls = 'warning';
+      
+      const p = document.createElement('div');
+      p.className = `log-line ${cls}`;
+      p.textContent = text;
+      logsEl.appendChild(p);
+      logsEl.scrollTop = logsEl.scrollHeight;
+    };
+
+    addLog('> Iniciando infraestrutura de agentes...');
+
+    try {
+      const llmVal = document.getElementById('llmSelect').value || null;
+      const modeVal = document.getElementById('modeSelect').value || 'fast';
+      const startRes = await fetch('/run/async', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, model: llmVal, mode: modeVal })
+      });
+      const startData = await startRes.json();
+      const taskId = startData.task_id;
+      const actionsEl = document.getElementById(`actions_${msgId}`);
+      const stopBtn = document.getElementById(`stopBtn_${msgId}`);
+      const restartBtn = document.getElementById(`restartBtn_${msgId}`);
+      
+      actionsEl.style.display = 'flex';
+      let ws;
+
+      const performKill = async () => {
+         stopBtn.disabled = true;
+         restartBtn.disabled = true;
+         stopBtn.textContent = '🛑 MATANDO...';
+         try {
+             await fetch(`/tasks/${taskId}/cancel`, {method: 'POST'});
+         } catch(e) { console.error("Erro ao matar tarefa:", e); }
+         if(ws) try { ws.close(); } catch(e) {}
+         
+         addLog('🛑 [SISTEMA] DIAMOND KILL ACIONADO. Processo encerrado fatalmente.');
+         document.getElementById(`spinner_${msgId}`).style.display = 'none';
+         const titleEl = document.getElementById(`title_${msgId}`);
+         titleEl.innerHTML = '🛑 Processo Encerrado (Kill)';
+         titleEl.style.color = '#f87171';
+         document.getElementById('sendBtn').disabled = false;
+         actionsEl.style.display = 'none';
+         setTimeout(() => loadHistory(), 2000);
+      };
+
+      stopBtn.onclick = performKill;
+      
+      restartBtn.onclick = async () => {
+         restartBtn.textContent = '🔄 REINICIANDO...';
+         await performKill();
+         addLog('🔄 [SISTEMA] DIAMOND RESTART. Iniciando nova thread...');
+         // Re-executa submitTask com o mesmo prompt
+         promptInput.value = prompt;
+         submitTask();
+      };
+
+      addLog(`> Task ID associada: ${taskId}`);
+
+      const wsUrl = `ws://${location.host}/ws/${taskId}`;
+      ws = new WebSocket(wsUrl);
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === 'log') {
+          addLog(data.message);
+        } else if (data.type === 'done') {
+          finalizeAiMessage(msgId, data.result);
+        } else if (data.type === 'timeout') {
+          addLog('> Servidor WS encerrou, checando api...');
+          pollFallback(msgId, taskId, logsEl);
+        }
+      };
+
+      ws.onerror = () => {
+        pollFallback(msgId, taskId, logsEl);
+      };
+
+    } catch (err) {
+      addLog(`> ERRO DE CONEXÃO: ${err.message}`);
+      document.getElementById(`spinner_${msgId}`).style.display = 'none';
+      document.getElementById('sendBtn').disabled = false;
+    }
+  }
+
+  function pollFallback(msgId, taskId, logsEl) {
+    const intv = setInterval(async () => {
+      try {
+        const res = await fetch(`/tasks/${taskId}`);
+        const data = await res.json();
+        const logs = data.logs || [];
+        
+        // sync logs manually
+        const currentLines = logsEl.children.length - 2; 
+        if (logs.length > currentLines && currentLines >= 0) {
+           for(let i = currentLines; i < logs.length; i++) {
+             if(logs[i]) {
+                const textLower = logs[i].toLowerCase();
+                let cls = '';
+                if (textLower.includes('erro') || textLower.includes('falhou') || textLower.includes(' timeout')) cls = 'error';
+                else if (textLower.includes('sucesso') || textLower.includes('✅')) cls = 'success';
+                else if (textLower.includes('⚠️')) cls = 'warning';
+                
+                const p = document.createElement('div');
+                p.className = `log-line ${cls}`;
+                p.textContent = logs[i];
+                logsEl.appendChild(p);
+                logsEl.scrollTop = logsEl.scrollHeight;
+             }
+           }
+        }
+        
+        if (data.status !== 'running') {
+          clearInterval(intv);
+          finalizeAiMessage(msgId, data);
+        }
+      } catch (e) {
+        clearInterval(intv);
+        document.getElementById(`spinner_${msgId}`).style.display = 'none';
+        document.getElementById('sendBtn').disabled = false;
+      }
+    }, 1500);
+  }
+
+  function finalizeAiMessage(msgId, result) {
+    document.getElementById(`spinner_${msgId}`).style.display = 'none';
+    const title = document.getElementById(`title_${msgId}`);
+    const resultBox = document.getElementById(`result_${msgId}`);
+    document.getElementById('sendBtn').disabled = false;
+
+    if (result.status === 'success') {
+      title.innerHTML = '✨ Projeto Finalizado com Sucesso';
+      title.style.color = '#4ade80';
+    } else {
+      title.innerHTML = '⚠️ Processo Encerrado. Status: ' + result.status;
+      title.style.color = '#fb923c';
+    }
+
+    // Build metric grid
+    let projName = '';
+    if(result.project_path) {
+       projName = result.project_path.split(/\\|\//).pop();
+    }
+
+    resultBox.style.display = 'block';
+    
+    let filesHtml = result.files && result.files.length 
+      ? `<div style="margin-top:20px"><strong style="color:var(--text-secondary);font-size:0.85rem;text-transform:uppercase">Arquivos Gerados</strong>
+         <ul style="list-style:none;margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+            ${result.files.map(f => `<li style="background:var(--bg-dark);border:1px solid var(--border);padding:6px 12px;border-radius:6px;font-size:0.85rem">📄 ${f}</li>`).join('')}
+         </ul></div>`
+      : '';
+
+    let scoreVal = result.score ? Math.round(result.score * 100) + '%' : 'N/A';
+
+    resultBox.innerHTML = `
+      <div class="result-grid">
+        <div class="result-metric">
+          <div class="metric-label">Diretório</div>
+          <div class="metric-val" style="font-size:0.9rem;word-break:break-all">${projName || 'Falha'}</div>
+        </div>
+        <div class="result-metric">
+          <div class="metric-label">Agente</div>
+          <div class="metric-val text-accent">${result.agent || result.route || 'Local'}</div>
+        </div>
+        <div class="result-metric">
+          <div class="metric-label">Quality Score</div>
+          <div class="metric-val ${result.status === 'success' ? 'success' : ''}">${scoreVal}</div>
+        </div>
+      </div>
+      ${filesHtml}
+      ${projName ? `<button class="open-files-btn" onclick="openSidebarFiles('${projName}')">Abrir Editor / Arquivos</button>` : ''}
+    `;
+
+    loadHistory();
+  }
+
+  async function openSidebarFiles(projectName) {
+    const panel = document.getElementById('sidePanel');
+    const tabsContainer = document.getElementById('fileTabs');
+    const codeViewer = document.getElementById('codeViewer');
+    const mdViewer = document.getElementById('mdViewer');
+    
+    panel.classList.add('open');
+    tabsContainer.innerHTML = '<div style="padding:16px;color:#a1a1aa;font-size:0.85rem">Carregando arquivos...</div>';
+    codeViewer.style.display = 'none';
+    mdViewer.style.display = 'none';
+
+    try {
+      const res = await fetch('/projects/' + projectName);
+      if(!res.ok) throw new Error("Erro");
+      currentProjectData = await res.json();
+
+      let files = {};
+      if(currentProjectData.files) {
+        files = currentProjectData.files;
+      }
+      
+      const fileNames = Object.keys(files);
+      if (fileNames.length === 0) {
+         tabsContainer.innerHTML = '<div style="padding:16px;color:#f87171;font-size:0.85rem">Nenhum arquivo lido :(</div>';
+         return;
+      }
+
+      // Prioritize manual.md or main.py or index.html
+      let activeFile = fileNames[0];
+      if (fileNames.includes('manual.md')) activeFile = 'manual.md';
+      else if (fileNames.includes('README.md')) activeFile = 'README.md';
+      else if (fileNames.includes('index.html')) activeFile = 'index.html';
+      else if (fileNames.includes('main.py')) activeFile = 'main.py';
+
+      renderTabs(fileNames, activeFile);
+      renderFileContent(activeFile);
+      
+    } catch (e) {
+      tabsContainer.innerHTML = '<div style="padding:16px;color:#f87171;font-size:0.85rem">Erro ao carregar projeto: ' + e.message + '</div>';
+    }
+  }
+
+  function renderTabs(fileNames, activeFile) {
+    const tabsContainer = document.getElementById('fileTabs');
+    tabsContainer.innerHTML = '';
+    
+    fileNames.forEach(fn => {
+      const div = document.createElement('div');
+      div.className = 'tab ' + (fn === activeFile ? 'active' : '');
+      div.textContent = fn;
+      div.onclick = () => {
+        renderTabs(fileNames, fn);
+        renderFileContent(fn);
+      };
+      tabsContainer.appendChild(div);
+    });
+  }
+
+  function renderFileContent(filename) {
+    const content = currentProjectData.files[filename] || '';
+    const codeViewer = document.getElementById('codeViewer');
+    const mdViewer = document.getElementById('mdViewer');
+
+    if (filename.toLowerCase().endsWith('.md')) {
+      codeViewer.style.display = 'none';
+      mdViewer.style.display = 'block';
+      mdViewer.innerHTML = mdParser.render(content);
+    } else {
+      mdViewer.style.display = 'none';
+      codeViewer.style.display = 'block';
+      let safeContent = content.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      codeViewer.innerHTML = safeContent;
+    }
+  }
+
+  function closeSidebar() {
+    document.getElementById('sidePanel').classList.remove('open');
+  }
+
+  async function deleteProj(name, e) {
+    if(e) e.stopPropagation();
+    if(!confirm("Deseja excluir este projeto Diamond?")) return;
+    try {
+      const res = await fetch('/projects/' + name, { method: 'DELETE' });
+      if(res.ok) loadHistory();
+    } catch(e) { console.error(e); }
+  }
+
+  async function refactorProject(name, task, e) {
+    if(e) e.stopPropagation();
+    if(!confirm("Deseja excluir e iniciar uma REFATORAÇÃO TOTAL com nova perspectiva de LLM para este projeto?")) return;
+    
+    // Deleta o antigo
+    await fetch('/projects/' + name, { method: 'DELETE' });
+    
+    // Inicia novo pipeline
+    document.getElementById('taskInput').value = task;
+    runPipeline();
+    loadHistory();
+  }
+
+  async function loadHistory() {
+    try {
+      const res = await fetch('/projects');
+      const data = await res.json();
+      const list = document.getElementById('historyList');
+      list.innerHTML = '';
+      if(data.projects && data.projects.length) {
+         data.projects.slice(0, 30).forEach(p => {
+            const li = document.createElement('li');
+            li.className = 'history-item';
+            let pname = p.project_path.split(/\\|\//).pop();
+            
+            li.innerHTML = `
+              <div class="history-content" onclick="openSidebarFiles('${pname}')">
+                ✨ ${p.task}
+              </div>
+              <div class="history-actions">
+                <span class="action-icon action-ref" title="Diamond Refactor (Reiniciar)" onclick="refactorProject('${pname}', '${p.task.replace(/'/g, "\\'")}', event)">🔄</span>
+                <span class="action-icon action-del" title="Excluir" onclick="deleteProj('${pname}', event)">🗑️</span>
+              </div>
+            `;
+            li.title = p.task;
+            list.appendChild(li);
+         });
+      }
+      
+      const sRes = await fetch('/stats');
+      const sData = await sRes.json();
+      document.getElementById('statRate').textContent = Math.round((sData.success_rate || 0) * 100) + '%';
+      document.getElementById('statScore').textContent = ((sData.average_score || 0) * 100).toFixed(0) + '%';
+
+    } catch (e) {}
+  }
+
+  // init
+  loadHistory();
+</script>
+</body>
+</html>
