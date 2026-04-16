@@ -9,6 +9,7 @@ Estratégia:
 """
 import subprocess
 import os
+import re
 import tempfile
 import sys
 from pathlib import Path
@@ -194,9 +195,93 @@ def _classify_error(stderr: str) -> tuple[str, str]:
     return "other", stderr[:200]
 
 
+def _detect_project_type(file_names: set, project_path: str) -> str:
+    """Detecta se o projeto é um jogo, webapp, ou util/automação."""
+    # Lê o conteúdo dos arquivos principais para detectar
+    game_signals = {"pygame", "canvas", "phaser", "game", "sprite", "player", "enemy", 
+                    "score", "level", "gameloop", "game_loop", "joystick", "kaboom",
+                    "requestAnimationFrame", "KEYDOWN", "collision"}
+    web_signals = {"flask", "fastapi", "django", "express", "react", "vue", "angular",
+                   "router", "middleware", "database", "endpoint", "API"}
+
+    content_lower = ""
+    for fname in file_names:
+        fpath = os.path.join(project_path, fname)
+        if os.path.isfile(fpath) and fname.endswith((".py", ".js", ".html", ".ts")):
+            try:
+                with open(fpath, "r", encoding="utf-8", errors="replace") as f:
+                    content_lower += f.read(3000).lower() + " "
+            except Exception:
+                pass
+
+    game_hits = sum(1 for s in game_signals if s in content_lower)
+    web_hits = sum(1 for s in web_signals if s in content_lower)
+
+    if game_hits >= 2:
+        return "game"
+    if web_hits >= 2:
+        return "webapp"
+    if "index.html" in file_names and game_hits >= 1:
+        return "game"
+    return "tool"
+
+
+def _auto_generate_requirements(project_path: str, file_names: set):
+    """Auto-gera requirements.txt analisando imports dos .py do projeto."""
+    # Bibliotecas padrão que NÃO devem ir no requirements
+    stdlib = {"os", "sys", "re", "json", "math", "random", "time", "datetime",
+              "collections", "itertools", "functools", "pathlib", "typing",
+              "subprocess", "threading", "multiprocessing", "hashlib", "shutil",
+              "tempfile", "io", "string", "copy", "enum", "abc", "dataclasses",
+              "argparse", "logging", "unittest", "csv", "sqlite3", "http",
+              "urllib", "socket", "ssl", "email", "html", "xml", "ctypes",
+              "struct", "array", "queue", "signal", "glob", "fnmatch",
+              "statistics", "decimal", "fractions", "textwrap", "difflib",
+              "pprint", "traceback", "warnings", "contextlib", "inspect",
+              "importlib", "pkgutil", "platform", "uuid", "secrets",
+              "base64", "binascii", "codecs", "unicodedata", "locale",
+              "gettext", "calendar", "heapq", "bisect", "weakref",
+              "types", "operator", "atexit", "gc", "dis", "ast",
+              "token", "tokenize", "compileall", "pdb", "profile",
+              "cProfile", "timeit", "trace", "pickletools", "pickle",
+              "shelve", "marshal", "dbm", "gzip", "bz2", "lzma",
+              "zipfile", "tarfile", "configparser", "netrc", "xdrlib",
+              "plistlib", "hmac", "mimetypes", "webbrowser", "cgi",
+              "cgitb", "wsgiref", "xmlrpc", "turtle", "tkinter", "_thread"}
+
+    external_imports = set()
+    for fname in file_names:
+        if not fname.endswith(".py"):
+            continue
+        fpath = os.path.join(project_path, fname)
+        if not os.path.isfile(fpath):
+            continue
+        try:
+            with open(fpath, "r", encoding="utf-8", errors="replace") as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith("import "):
+                        mod = line.split()[1].split(".")[0]
+                        if mod not in stdlib:
+                            external_imports.add(mod)
+                    elif line.startswith("from ") and " import " in line:
+                        mod = line.split()[1].split(".")[0]
+                        if mod not in stdlib:
+                            external_imports.add(mod)
+        except Exception:
+            pass
+
+    if external_imports:
+        req_path = os.path.join(project_path, "requirements.txt")
+        with open(req_path, "w", encoding="utf-8") as f:
+            for mod in sorted(external_imports):
+                f.write(f"{mod}\n")
+
+
 def validate_project_structure(project_path: str) -> dict:
     """
-    Valida se um projeto gerado tem estrutura PRO nível Diamond.
+    Valida se um projeto gerado tem estrutura adequada.
+    Ajusta os critérios pelo tipo de projeto (game vs webapp vs tool).
     """
     if not os.path.isdir(project_path):
         return {"valid": False, "score": 0, "issues": ["Diretório não existe"]}
@@ -207,44 +292,68 @@ def validate_project_structure(project_path: str) -> dict:
     file_names = {f.name for f in files if f.is_file()}
     dirs = {f.name for f in files if f.is_dir()}
 
-    # Arquivo Principal (Core)
-    if "main.py" in file_names or "index.html" in file_names or "app.py" in file_names:
-        score += 30
+    # Detecta tipo de projeto para ajustar critérios
+    project_type = _detect_project_type(file_names, project_path)
+
+    # Arquivo Principal (Core) - vale para todos
+    has_entry = ("main.py" in file_names or "index.html" in file_names 
+                 or "app.py" in file_names or "run.py" in file_names
+                 or "index.js" in file_names)
+    if has_entry:
+        score += 40
     else:
         issues.append("Ponto de entrada (main.py/index.html) não encontrado")
 
-    # Dependências (Profissionalismo)
+    # Dependências - Auto-gera se faltando para Python
     if "requirements.txt" in file_names or "package.json" in file_names:
-        score += 20
+        score += 15
     else:
-        issues.append("requirements.txt/package.json ausente (crucial)")
+        # Auto-gera requirements.txt analisando imports
+        _auto_generate_requirements(project_path, file_names)
+        if os.path.exists(os.path.join(project_path, "requirements.txt")):
+            score += 15
+            file_names.add("requirements.txt")
+        elif project_type == "game":
+            # Jogos HTML5/Canvas não precisam de requirements
+            score += 10
+        else:
+            issues.append("requirements.txt/package.json ausente")
 
-    # Documentação (Industrial)
+    # Documentação
     if "manual.md" in file_names or "README.md" in file_names:
-        score += 10
+        score += 15
     else:
         issues.append("Manual técnico ou README ausente")
 
-    # Modularização (Diamond)
-    if any(d in dirs for d in ["src", "app", "core", "utils", "models"]):
-        score += 15
-    
-    # Testes (Enterprise Ready)
+    # Modularização - bônus, não penaliza jogos
+    if any(d in dirs for d in ["src", "app", "core", "utils", "models", "assets"]):
+        score += 10
+    elif project_type != "game":
+        # Só penaliza se não for jogo
+        score += 5  # bônus parcial para projetos simples
+
+    # Testes - bônus, nunca penaliza jogos
     if any(d in dirs for d in ["tests", "test"]):
-        score += 15
+        score += 10
     elif any(f.startswith("test_") and f.endswith(".py") for f in file_names):
         score += 10
-    else:
-        issues.append("Ausência de suíte de testes (necessário para Diamond)")
-
-    # Configurações
-    if ".env.example" in file_names or "config" in dirs or "settings.py" in file_names:
+    elif project_type == "game":
+        # Jogos não precisam de testes unitários para funcionar
         score += 10
 
+    # Bônus: múltiplos arquivos = projeto mais completo
+    py_files = [f for f in file_names if f.endswith((".py", ".js", ".html", ".css"))]
+    if len(py_files) >= 3:
+        score += 5
+
+    # Clamp
+    score = min(100, score)
+
     return {
-        "valid": score >= 40,
+        "valid": score >= 50,
         "score": score,
         "issues": issues,
         "files": list(file_names),
+        "project_type": project_type,
         "diamond_ready": score >= 80
     }

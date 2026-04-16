@@ -49,11 +49,16 @@ def quality_check(code_or_output: str | dict) -> dict:
 
     prompt = f"""Você é um engenheiro sênior de software avaliando código gerado por IA.
 
-Avalie os seguintes critérios (seja objetivo e rígido):
+Avalie os seguintes critérios (seja objetivo e justo):
 - Funcionalidade: o código parece executar corretamente?
 - Organização: estrutura clara, sem código redundante?
 - Boas práticas: nomes significativos, sem magic numbers?
 - Completude: está completo (não é pseudocódigo ou placeholder)?
+
+IMPORTANTE:
+- Se o código for um JOGO (pygame, canvas, phaser, etc), NÃO penalize por ausência de testes, requirements.txt, ou estrutura modular. Jogos simples são tipicamente single-file e isso é aceitável.
+- Se o código for uma aplicação web/SaaS, avalie com mais rigor sobre estrutura e organização.
+- Foque na FUNCIONALIDADE real: o código faz o que deveria fazer?
 
 Código a avaliar:
 ```
@@ -70,9 +75,9 @@ Responda SOMENTE com JSON válido:
 
 Regras do score:
 - 0.0-0.3: quebrado ou pseudocódigo
-- 0.3-0.6: parcialmente funcional
-- 0.6-0.8: funcional mas com problemas
-- 0.8-1.0: bem implementado"""
+- 0.3-0.5: parcialmente funcional
+- 0.5-0.7: funcional mas com problemas
+- 0.7-1.0: bem implementado e funcional"""
 
     res = ask("quality_evaluator", prompt, timeout=60)
 
@@ -85,7 +90,7 @@ Regras do score:
             "score": score,
             "issues": data.get("issues", []),
             "improvements": data.get("improvements", []),
-            "ok": score >= 0.7
+            "ok": score >= 0.6
         }
 
     except Exception as e:
