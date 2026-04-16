@@ -47,6 +47,14 @@ class StdoutRedirector:
 def pipeline_worker(task_id, task_text, user_id, model, mode, log_queue, forced_agent=None, history=None):
     """Worker que roda em processo isolado para permitir interrupção real."""
     import sys
+    
+    # Fix UTF-8 for subprocess in Windows
+    if hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
     # Redireciona stdout para a queue de logs (Visualização Real-time no Dashboard)
     sys.stdout = StdoutRedirector(log_queue)
     

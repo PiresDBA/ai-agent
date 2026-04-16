@@ -126,7 +126,8 @@ def _call_ollama_raw(model: str, agent: str, prompt: str, timeout: int = 180) ->
     """
     
     # Injection of the Safe Operations Contract
-    if agent != "router":
+    # We explicitly skip 'router' and conversational agents ('bulldog_frida') to prevent timeouts and persona breakdown.
+    if agent not in ["router", "bulldog_frida", "DiamondTriage", "DiamondExpander", "senior_debugger", "quality_evaluator"]:
         try:
             contract_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "CONTRATO.md")
             if os.path.exists(contract_path):
