@@ -66,15 +66,17 @@
   }
   
   .brand-icon {
-    width: 32px;
-    height: 32px;
-    background: white; 
-    mask: url('assets/bulldog_white.png') no-repeat center; 
-    -webkit-mask: url('assets/bulldog_white.png') no-repeat center; 
-    mask-size: 85%; 
-    -webkit-mask-size: 85%;
-    filter: drop-shadow(0 0 8px var(--accent-glow));
+    width: 40px;
+    height: 40px;
     flex-shrink: 0;
+    filter: drop-shadow(0 0 10px var(--accent-glow));
+  }
+
+  .brand-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
   }
 
   /* AGENT SELECTOR */
@@ -258,16 +260,21 @@
     justify-content: center;
     font-weight: 700;
     flex-shrink: 0;
+    overflow: hidden;
   }
 
   .avatar-user { background: var(--bg-input); border: 1px solid var(--border-light); }
   .avatar-ai { 
-    background: var(--gradient-primary); 
+    background: var(--bg-card); 
+    border: 1px solid var(--border);
     box-shadow: 0 0 15px var(--accent-glow);
-    mask: url('assets/bulldog_white.png') no-repeat center; 
-    -webkit-mask: url('assets/bulldog_white.png') no-repeat center; 
-    mask-size: 80%; 
-    -webkit-mask-size: 80%;
+    padding: 2px;
+  }
+  .avatar-ai img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 6px;
   }
 
   .msg-content {
@@ -647,7 +654,7 @@
 
   <aside class="sidebar">
     <div class="brand">
-      <div class="brand-icon"></div>
+      <div class="brand-icon"><img src="assets/bulldog_logo.png" alt="Bulldogue AI Logo"></div>
       Bulldogue AI
     </div>
 
@@ -687,7 +694,7 @@
       
       <!-- Welcome Message -->
       <div class="message" id="welcomeMsg">
-        <div class="avatar avatar-ai" style="background: white; mask: url('assets/bulldog_white.png') no-repeat center; -webkit-mask: url('assets/bulldog_white.png') no-repeat center; mask-size: contain; -webkit-mask-size: contain;"></div>
+        <div class="avatar avatar-ai" style="width:56px;height:56px;border-radius:12px;"><img src="assets/bulldog_hero.png" alt="Frida"></div>
         <div class="msg-content">
           <div class="user-text">
             <h2>Bem-vindo à Fábrica Bulldogue AI</h2>
@@ -807,7 +814,7 @@
         const aiMsg = document.createElement('div');
         aiMsg.className = 'message';
         aiMsg.innerHTML = `
-          <div class="avatar avatar-ai" style="background: url('assets/bulldog_chat.png'); background-size: cover;"></div>
+          <div class="avatar avatar-ai"><img src="assets/bulldog_chat.png" alt="Frida"></div>
           <div class="msg-content">
             <div class="bubble bubble-ai markdown-body">
               ${mdParser.render(result.message || 'Bulldog AI pronto para ajudar.')}
@@ -899,7 +906,7 @@
     msg.className = 'message';
     msg.id = msgId;
     msg.innerHTML = `
-      <div class="avatar avatar-ai">A</div>
+      <div class="avatar avatar-ai"><img src="assets/bulldog_chat.png" alt="Frida"></div>
       <div class="msg-content">
         <div class="agent-status-card">
           <div class="status-header">
@@ -1105,7 +1112,7 @@
       const aiMsg = document.createElement('div');
       aiMsg.className = 'message';
       aiMsg.innerHTML = `
-        <div class="avatar avatar-ai"></div>
+        <div class="avatar avatar-ai"><img src="assets/bulldog_chat.png" alt="Frida"></div>
         <div class="msg-content">
           <div class="bubble bubble-ai markdown-body">
             ${mdParser.render(result.message)}
