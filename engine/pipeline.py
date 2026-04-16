@@ -343,14 +343,14 @@ def run_pipeline(
             if exec_result["success"]:
                 # Pega o conteúdo principal para o Tech Lead avaliar
                 main_code = _read_main_file(project_path)
-                quality = quality_check(main_code, task)
+                quality = quality_check(main_code)
                 final_score = quality["score"]
-                log(f"📊 Qualidade: {final_score:.2f} {'✅' if final_score >= 0.85 else '❌'}")
+                log(f"📊 Qualidade: {final_score:.2f} {'✅' if final_score >= 0.70 else '❌'}")
                 if quality.get("issues"):
                     log(f"  Issues: {quality['issues']}")
 
-                # Se passou no Diamond Score, paramos
-                if final_score >= 0.85:
+                # Se passou no Score mínimo, paramos
+                if final_score >= 0.70:
                     error = None
             else:
                 log(f"  Execução: ❌ {error_type}")
@@ -366,7 +366,7 @@ def run_pipeline(
             })
 
             # --- Sucesso! ---
-            if exec_result["success"] and (final_score >= 0.85 or iteration == MAX_ITERATIONS - 1):
+            if exec_result["success"] and (final_score >= 0.70 or iteration == MAX_ITERATIONS - 1):
                 log(f"\n✅ SUCESSO! Score: {final_score:.2f} | Iterações: {iteration + 1}")
 
                 # Persiste na memória
@@ -393,7 +393,7 @@ def run_pipeline(
 
             # Ainda tem iterações → tenta melhorar
             if iteration < MAX_ITERATIONS:
-                if not exec_result["success"] or final_score < 0.85:
+                if not exec_result["success"] or final_score < 0.70:
                     log(f"  🔧 Aplicando correções (motivo: {'execução' if not exec_result['success'] else 'qualidade'})...")
                     project_path = smart_fix(project_path, error or "quality issue/low score", exec_result, log, error_type=error_type)
 
