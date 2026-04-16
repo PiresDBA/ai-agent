@@ -1,0 +1,82 @@
+antigravity/
+│
+├── api/
+│   └── main.py
+│
+├── core/
+│   ├── llm.py
+│   ├── orchestrator.py
+│   ├── memory.py
+│
+├── engine/
+│   ├── pipeline.py
+│   ├── executor.py
+│   ├── security.py
+│   ├── quality.py
+│   ├── autofix.py
+│
+├── agents/
+│   ├── agent_a_game.py
+│   ├── agent_b_saas.py
+│   ├── agent_c_dev.py
+│   ├── security_agent.py
+│   ├── quality_agent.py
+│
+├── tools/
+│   ├── github_fetcher.py
+│   ├── git_manager.py
+│   ├── site_cloner.py
+│
+├── main.py
+├── requirements.txt
+
+
+
+
+uvicorn api.main:app --reload
+
+
+🚀 Dashboard SaaS
+WebSocket para streaming de logs em tempo real
+Tarefas assíncronas com polling
+Botões de exemplo (snake, tetris, dashboard, etc.)
+Stats em tempo real (taxa de sucesso, score médio)
+Endpoints: /run, /run/async, /ws/{id}, /projects, /health, /models, /stats
+
+$env:PYTHONIOENCODING="utf-8"; python start.py
+Acesse http://localhost:8080 🎉
+
+
+Como Usar
+Iniciar
+bash
+# 1. Garantir que Ollama está rodando
+ollama serve
+# 2. Instalar modelo (se ainda não tiver)
+ollama pull llama3.2:3b
+# 3. Iniciar o sistema
+$env:PYTHONIOENCODING="utf-8"; python start.py
+Dashboard
+Abra http://localhost:8080 — use os botões de exemplo ou escreva seu prompt.
+
+API
+bash
+curl -X POST http://localhost:8080/run \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Crie um jogo snake em Python"}'
+Verificação de Status
+GET /health → {"status": "healthy", "ollama_online": true, "models": [...]}
+Os 8 modelos detectados automaticamente:
+
+llama3.2:3b, gemma3:4b, deepseek-coder:latest
+qwen2.5-coder:7b, llama3.1:8b, mistral:latest
+codellama:latest, phi3:latest
+
+
+
+python start.py
+
+python start.py
+
+python start.py
+http://localhost:8888
