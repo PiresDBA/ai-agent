@@ -9,6 +9,7 @@ import requests
 import subprocess
 import time
 import threading
+import os
 from functools import lru_cache
 
 OLLAMA_URL = "http://127.0.0.1:11434/api/generate"
@@ -121,7 +122,20 @@ def get_crewai_llm(model_name: str = None):
 def _call_ollama_raw(model: str, agent: str, prompt: str, timeout: int = 180) -> str:
     """
     Chamada HTTP direta ao Ollama. Thread-safe via lock global.
+    Aplica o Contrato Global da Bulldogue automaticamente a todos os agentes, exceto o router.
     """
+    
+    # Injection of the Safe Operations Contract
+    if agent != "router":
+        try:
+            contract_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "CONTRATO.md")
+            if os.path.exists(contract_path):
+                with open(contract_path, "r", encoding="utf-8") as f:
+                    contract = f.read()
+                prompt += f"\n\n=== CONTRATO DE OPERAÇÃO OBRIGATÓRIO ===\n{contract}"
+        except Exception:
+            pass
+
     payload = {
         "model": model,
         "prompt": f"Você é {agent}.\n\n{prompt}",
