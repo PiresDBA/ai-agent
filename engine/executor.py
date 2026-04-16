@@ -38,18 +38,19 @@ def run_project(project_path: str = None, code: str = None,
 
     try:
         # ===================================================
-        # MODO 1: Pasta de projeto com main.py
+        # MODO 1: Pasta de projeto com busca inteligente de entrypoint
         # ===================================================
         if project_path and os.path.isdir(project_path):
-            main_file = os.path.join(project_path, "main.py")
+            main_file = _find_main_file(project_path)
 
-            if not os.path.exists(main_file):
-                # Procura qualquer .py executável
-                py_files = list(Path(project_path).glob("*.py"))
+            if not main_file:
+                # Procura qualquer .py que pareça importante se não achou main.py
+                py_files = list(Path(project_path).rglob("*.py"))
                 if py_files:
                     main_file = str(py_files[0])
                 else:
                     result["error"] = f"Nenhum arquivo .py encontrado em: {project_path}"
+                    result["error_type"] = "structure"
                     return result
 
             proc = subprocess.run(
@@ -67,7 +68,9 @@ def run_project(project_path: str = None, code: str = None,
             result["executed"] = main_file
 
             if proc.returncode != 0:
-                result["error"] = f"Saiu com código {proc.returncode}: {proc.stderr[:500]}"
+                etype, emsg = _classify_error(proc.stderr)
+                result["error"] = f"[{etype}] {emsg}"
+                result["error_type"] = etype
 
             return result
 
@@ -102,7 +105,9 @@ def run_project(project_path: str = None, code: str = None,
                 result["executed"] = tmp_path
 
                 if proc.returncode != 0:
-                    result["error"] = f"Erro na execução: {proc.stderr[:500]}"
+                    etype, emsg = _classify_error(proc.stderr)
+                    result["error"] = f"[{etype}] {emsg}"
+                    result["error_type"] = etype
 
             finally:
                 try:
@@ -117,8 +122,10 @@ def run_project(project_path: str = None, code: str = None,
         # ===================================================
         if project_path:
             result["error"] = f"Caminho inválido ou não é diretório: {project_path}"
+            result["error_type"] = "path"
         else:
             result["error"] = "Nenhum projeto ou código fornecido para executar"
+            result["error_type"] = "input"
 
         return result
 
@@ -126,7 +133,9 @@ def run_project(project_path: str = None, code: str = None,
         # Para jogos ou servidores, exibir timeout sem gerar um crash real significa que funcionou!
         err_out = str(e.stderr) if e.stderr else ""
         if "Traceback" in err_out or "Error:" in err_out:
-            result["error"] = f"Timeout com erro: {err_out[:500]}"
+            etype, emsg = _classify_error(err_out)
+            result["error"] = f"Timeout com erro: {emsg}"
+            result["error_type"] = etype
             result["stderr"] = err_out
         else:
             result["success"] = True
@@ -137,7 +146,52 @@ def run_project(project_path: str = None, code: str = None,
 
     except Exception as e:
         result["error"] = f"Erro inesperado no executor: {str(e)}"
+        result["error_type"] = "internal"
         return result
+
+
+def _find_main_file(project_path: str) -> str:
+    """Busca o ponto de entrada principal de forma inteligente (recursiva)."""
+    p = Path(project_path)
+    # Ordem de preferência Diamond
+    search_patterns = [
+        "main.py", "app.py", "run.py", "index.py",
+        "app/main.py", "src/main.py", "src/app.py",
+        "**/main.py", "**/app.py"
+    ]
+    
+    for pattern in search_patterns:
+        matches = list(p.glob(pattern))
+        if matches:
+            return str(matches[0])
+    return None
+
+
+def _classify_error(stderr: str) -> tuple[str, str]:
+    """Classifica o erro do Python em categorias Diamond."""
+    if not stderr:
+        return "unknown", "Erro oculto ou processo interrompido"
+    
+    if "ModuleNotFoundError" in stderr:
+        module = re.search(r"ModuleNotFoundError: No module named '([^']+)'", stderr)
+        module_name = module.group(1) if module else "desconhecido"
+        return "dependency", f"Biblioteca faltando: {module_name}"
+        
+    if "SyntaxError" in stderr or "IndentationError" in stderr:
+        return "syntax", "Erro de sintaxe ou indentação no código"
+        
+    if "ImportError" in stderr:
+        return "import", "Erro ao importar módulo ou objeto interno"
+        
+    if "AttributeError" in stderr or "TypeError" in stderr:
+        return "logic", "Erro de lógica/tipo (acesso a atributo inexistente ou tipo inválido)"
+        
+    if "Traceback" in stderr:
+        # Pega a última linha do traceback
+        lines = stderr.strip().splitlines()
+        return "runtime", lines[-1] if lines else "Erro de execução"
+        
+    return "other", stderr[:200]
 
 
 def validate_project_structure(project_path: str) -> dict:

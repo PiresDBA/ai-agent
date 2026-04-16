@@ -36,55 +36,90 @@ def agent_b(task: str, model: str = None, mode: str = "fast") -> str:
         except Exception as e:
             print(f"⚠️ Falha no cloner: {e}")
 
-    # 3. GITHUB FETCH: Busca lógica e estrutura
-    base_repo = None
+    # 3. KNOWLEDGE & FETCH: Lógica e estrutura
+    kb_context = ""
     try:
-        from github_fetcher import github_fetch
-        # Limpa e resume o task para a busca não estourar 256 chars
+        from tools.github_fetcher import search_local_knowledge, github_fetch
+        # 3.1. Busca no Conhecimento Local (KB) primeiro
+        kb_context = search_local_knowledge(task)
+        
+        # 3.2. Se KB não for suficiente, busca no GitHub
+        base_repo = None
         clean_task = re.sub(r'[^\w\s]', '', task)
         task_keywords = " ".join(clean_task.split()[:8])
         
-        # Busca por lógica (FastAPI/Backend)
         print(f"🔍 [DIAMOND SEARCH] Buscando lógica para: {task_keywords}")
         repos = github_fetch(task_keywords + " backend fastapi")
         base_repo = repos[0] if repos else None
         
-        # Se não achou backend, tenta estrutura geral
         if not base_repo:
             repos = github_fetch(task_keywords + " webapp boilerplate")
             base_repo = repos[0] if repos else None
     except Exception as e:
-        print("⚠️ Erro ao buscar Github:", e)
+        print("⚠️ Erro ao buscar conhecimento:", e)
 
-    prompt = f"""Você é o ARQUITETO FULL-STACK DIAMOND (Tech Lead).
-FILOSOFIA OBRIGATÓRIA: NUNCA REMOVA SEM NECESSIDADE VITAL, SOMENTE MELHORE E CORRIJA, MELHORIA CONTINUA E EXCELENCIA!
+    prompt = f"""IDENTIDADE:
+Você é o App Agent, um agente especialista em desenvolvimento de aplicativos. Sua função é criar interfaces, telas, componentes visuais, fluxos de usuário e features de aplicativos mobile e web. Você pensa como um desenvolvedor full-stack focado em produto (Tech Lead).
 
-Sua missão é construir um sistema NÍVEL ENTERPRISE: escalável, seguro e premium.
+{kb_context if kb_context else ""}
 
-TAREFA: {task}
+REGRAS DO QUE VOCÊ PODE FAZER:
+- Criar interfaces de usuário (UI) e experiências (UX)
+- Desenvolver telas, componentes e layouts
+- Implementar navegação e fluxos entre telas
+- Criar formulários, listas, modais, dashboards
+- Estruturar a arquitetura do aplicativo (pastas, rotas, estados)
+- Integrar APIs REST e GraphQL
+- Implementar autenticação (login, cadastro, sessão)
+- Criar aplicativos em: React, React Native, Next.js, Flutter, Vue
+- Gerenciar estado com: Redux, Zustand, Context API, Provider
 
-PADRÕES DIAMANTE (OBRIGATÓRIO):
-1. ARQUITETURA DE ELITE: Clean Architecture, separação de Services e Repositories.
-2. SEGURANÇA: Validação rigorosa (Pydantic), tratamento de erros global e logging.
-3. UI/UX PREMIUM: CSS moderno, animações suaves e design industrial.
-4. SUÍTE DE TESTES (CRUCIAL): Crie um arquivo `test_main.py` com `pytest` que valide as rotas e regras de negócio.
-5. STACK MODERNA: FastAPI para backend. Requisitos com versões fixas.
+REGRAS DO QUE VOCÊ NÃO PODE FAZER:
+- NÃO criar lógica de jogos (física, mecânicas, NPCs)
+- NÃO criar automações de processos externos (scripts, bots, pipelines)
+- NÃO criar infraestrutura de servidor (Docker, CI/CD, deploy)
+- NÃO responder perguntas de chat genéricas fora do contexto do app
+- NÃO executar tarefas que pertençam a outros agentes
 
-FORMATO DE SAÍDA:
-```linguagem # nome_do_arquivo.ext
-# Código Industrial Completo
-```
+PROTOCOLO DE EXECUÇÃO OBRIGATÓRIO:
+1. Antes de qualquer código, defina: qual tela/feature, qual framework, qual o fluxo esperado
+2. Crie primeiro a estrutura (esqueleto), depois o conteúdo, depois o estilo
+3. Documente cada componente criado com: nome, função, props esperadas
+4. Ao finalizar, verifique: (a) o fluxo faz sentido para o usuário? (b) o código está limpo e reutilizável? (c) existem casos de erro tratados?
 
-Arquivos esperados: `main.py`, `test_main.py`, `requirements.txt`, `manual.md`."""
+PROTOCOLO DE FALHA:
+- Se receber uma tarefa de outro agente: recuse gentilmente e redirecione
+- Se não souber qual tecnologia usar: pergunte antes de agir
+- Se encontrar um erro: descreva o erro, a causa provável e a solução proposta
+- NUNCA crie código que você não consegue explicar linha por linha
 
-    # Tenta usar CrewAI para orquestração de 2 agentes (Lead + Developer)
+SAÍDA PADRÃO:
+Sempre entregue: Estrutura de arquivos → Código comentado → Como rodar → O que ainda falta
+
+TAREFA ATUAL: {task}"""
+
+    # 4. DIAMOND TRIAGE: Avalia se a tarefa é simples (Relatório/Informação) ou complexa (SaaS)
+    triage_prompt = f"Analyze if this task is a 'simple_information_report' or a 'complex_saas_app': {task}\nRespond ONLY 'simple' or 'complex'."
+    is_simple = False
     try:
-        from core.crew_factory import run_diamond_crew
-        print("🤝 [DIAMOND CREW] Iniciando colaboração de elite (2 Agentes)...")
-        response = run_diamond_crew(f"Create a SaaS following these rules: {prompt}", model_name=model)
-    except Exception as e:
-        print(f"⚠️ CrewAI não disponível ou falhou ({e}), usando agente único...")
-        response = ask("saas_developer", prompt, model=model, timeout=180)
+        triage_res = ask("DiamondTriage", triage_prompt, model="llama3.2:3b", timeout=15).lower()
+        if "simple" in triage_res:
+            is_simple = True
+            print("💡 [FAST TRACK] Tarefa SaaS identificada como simples. Respondendo sem orquestração pesada...")
+    except: pass
+
+    if is_simple:
+        response = ask("saas_developer", prompt, model=model, timeout=120)
+    else:
+        # Tenta usar CrewAI para orquestração de 2 agentes (Lead + Developer)
+        try:
+            from core.crew_factory import run_diamond_crew
+            print("🤝 [DIAMOND CREW] Iniciando colaboração de elite (2 Agentes)...")
+            response = run_diamond_crew(f"Create a SaaS following these rules: {prompt}", model_name=model)
+        except Exception as e:
+            print(f"⚠️ CrewAI não disponível ou falhou ({e}), usando agente único...")
+            response = ask("saas_developer", prompt, model=model, timeout=180)
+    
 
     if not response or len(response) < 100:
         return _fallback_todo_app(task)

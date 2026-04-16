@@ -48,6 +48,7 @@ from core.llm import ask
 from agents.agent_a_game import agent_a
 from agents.agent_b_saas import agent_b
 from agents.agent_c_dev import agent_c
+from agents.agent_d_chat import agent_d
 
 from engine.executor import run_project, validate_project_structure
 from engine.security import security_check
@@ -61,8 +62,8 @@ MAX_FIX_ATTEMPTS = 2
 # SELEÇÃO DE AGENTE
 # ===================================================
 def select_agent(route_id: str) -> Callable:
-    agents = {"A": agent_a, "B": agent_b, "C": agent_c}
-    return agents.get(route_id, agent_c)
+    agents = {"A": agent_a, "B": agent_b, "C": agent_c, "D": agent_d}
+    return agents.get(route_id, agent_d)
 
 
 # ===================================================
@@ -96,12 +97,16 @@ def classify_error(error: str | None) -> str:
 # ===================================================
 # SMART FIXER — corrige projeto com LLM
 # ===================================================
-def smart_fix(project_path: str, error: str, output: dict, log: Callable) -> str:
+def smart_fix(project_path: str, error: str, output: dict, log: Callable, error_type: str = "unknown") -> str:
     """
     Tenta corrigir o projeto analisando os erros e reescrevendo arquivos.
 
-    Returns:
-        Novo caminho de projeto corrigido, ou o original se falhar.
+    Args:
+        project_path: Caminho do diretório do projeto
+        error: Descrição do erro
+        output: Resultado da execução
+        log: Callback de log
+        error_type: Categoria do erro (dependency, syntax, etc)
     """
     # Lê os arquivos do projeto
     project_files = {}
@@ -129,26 +134,26 @@ FILOSOFIA OBRIGATÓRIA: NUNCA REMOVA SEM NECESSIDADE VITAL, SOMENTE MELHORE E CO
 
 Sua missão é realizar uma CIRURGIA TÉCNICA para atingir a perfeição Diamond.
 
-CONTEXTO DE FALHA/QUALIDADE:
+CATEGORIA DO ERRO: {error_type.upper()}
+DETALHES DA FALHA:
 {error or stderr or "Baixa qualidade detectada na avaliação senior."}
 
 ARQUIVOS ATUAIS DO PROJETO:
-{files_str[:5000]}
+{files_str[:8000]}
 
 DIRETRIZES TÉCNICAS:
-1. ANÁLISE PROFUNDA: Identifique a causa raiz e resolva com precisão.
-2. REFATORAÇÃO ADITIVA: Melhore a estrutura sem remover lógica funcional pré-existente.
+1. ANÁLISE PROFUNDA: Identifique a causa raiz. Se for DEPENDENCY, corrija o `requirements.txt`.
+2. PRECISÃO CIRÚRGICA: NUNCA crie novos arquivos com nomes parecidos aos existentes (ex: se existe `main.py`, nunca crie `mainn.py`).
 3. COMPLETUDE TOTAL: NUNCA use placeholders. 100% de código real.
-4. DEPENDÊNCIAS: Garanta `requirements.txt` atualizado se necessário.
-5. CLEAN CODE: SOLID, Docstrings e Type Hinting.
+4. CLEAN CODE: SOLID, Docstrings e Type Hinting.
 
-FORMATO DE SAÍDA:
-```linguagem # nome_do_arquivo.ext
+FORMATO DE SAÍDA (APENAS ARQUIVOS MODIFICADOS):
+```linguagem # caminho/do/arquivo.ext
 # Explicação Técnica Diamond
 # Código Corrigido e Industrial
 ```"""
 
-    log(f"🔧 Enviando para correção via LLM...")
+    log(f"🐶 [Bulldog Intelligence] Enviando para correção via LLM (Tipo: {error_type})...")
     fixed_response = ask("senior_debugger", prompt, timeout=300)
 
     if not fixed_response or len(fixed_response) < 50:
@@ -178,7 +183,9 @@ def run_pipeline(
     model: str = None,
     mode: str = "fast",
     task_id: str = None,
-    log_queue = None
+    log_queue = None,
+    forced_agent: str = None,
+    history: list = None
 ) -> dict:
     """
     Pipeline AGI v9 completo.
@@ -200,31 +207,41 @@ def run_pipeline(
         with open("logs/pipeline.log", "a", encoding="utf-8") as f:
             f.write(f"[{time.strftime('%H:%M:%S')}] {msg}\n")
         
-        if log_queue:
-            try: log_queue.put(msg)
-            except: pass
+        # log_queue.put handle via sys.stdout redirect in worker
 
         if log_callback:
             log_callback(msg)
 
     log(f"\n{'='*60}")
-    log(f"🤖 PIPELINE AGI v9 | Tarefa: {task[:80]}")
+    log(f"🐶 BULLDOG AGI | Tarefa: {task[:80]}")
     log(f"{'='*60}")
-
     try:
         # ===================================================
         # 1. ROTEAMENTO
         # ===================================================
-        decision = route(task, use_cache=False)
+        log("🧭 Iniciando Roteamento Diamond...")
+        decision = route(task, forced_route=forced_agent)
         r = decision.route
         log(f"🧭 Roteado → Agente {r} ({decision.reason}, conf={decision.confidence:.2f})")
 
-        # ===================================================
-        # 2. GERAÇÃO INICIAL DO PROJETO
-        # ===================================================
+        # Load Agent Function
         agent_fn = select_agent(r)
-        log(f"🚀 Iniciando geração com Agente {r}...")
 
+        if r == "D":
+            log(f"🐶 Iniciando conversa Bulldog...")
+            chat_response = agent_fn(task, model=model, mode=mode)
+            # Finaliza direto para o chat
+            return {
+                "status": "success",
+                "route": "D",
+                "message": chat_response,
+                "project_path": None,
+                "files": [],
+                "logs": ["Conversa processada com sucesso."]
+            }
+
+
+        log(f"🚀 Iniciando geração com Agente {r}...")
         try:
             project_path = agent_fn(task, model=model, mode=mode)
         except Exception as e:
@@ -310,6 +327,18 @@ def run_pipeline(
             error = exec_result.get("error")
             error_type = exec_result.get("error_type", "unknown")
 
+            # --- DIAMOND SANITY FILTER: Remove alucinações de nomes (ex: mainn.py) ---
+            _diamond_sanity_cleanup(project_path, log)
+
+            # --- AUTO-DEPENDENCY: Se faltar biblioteca, tenta instalar na hora ---
+            if error_type == "dependency":
+                log("🔍 Detectada dependência faltante. Tentando instalar...")
+                _try_install_requirements(project_path, log)
+                # Tenta rodar de novo IMEDIATAMENTE antes de pedir pro LLM
+                exec_result = run_project(project_path=project_path, timeout=30)
+                error = exec_result.get("error")
+                error_type = exec_result.get("error_type", "unknown")
+
             # Se rodou, aplicamos avaliação técnica profunda
             if exec_result["success"]:
                 # Pega o conteúdo principal para o Tech Lead avaliar
@@ -325,9 +354,10 @@ def run_pipeline(
                     error = None
             else:
                 log(f"  Execução: ❌ {error_type}")
-                if error_type in ("syntax", "import"):
-                    log(f"💀 Erro crítico ({error_type}) → Tentando corrigir")
-                
+                if error:
+                    log(f"  📝 Detalhes: {error[:100]}...")
+
+            # Log para histórico interno
             history.append({
                 "iteration": iteration + 1,
                 "error": error,
@@ -365,7 +395,7 @@ def run_pipeline(
             if iteration < MAX_ITERATIONS:
                 if not exec_result["success"] or final_score < 0.85:
                     log(f"  🔧 Aplicando correções (motivo: {'execução' if not exec_result['success'] else 'qualidade'})...")
-                    project_path = smart_fix(project_path, error or "quality issue/low score", exec_result, log)
+                    project_path = smart_fix(project_path, error or "quality issue/low score", exec_result, log, error_type=error_type)
 
             time.sleep(0.3)
 
@@ -439,6 +469,47 @@ def _try_install_requirements(project_path: str, log: Callable) -> bool:
     req_file = os.path.join(project_path, "requirements.txt")
     if not os.path.exists(req_file):
         return False
+
+
+def _diamond_sanity_cleanup(project_path: str, log: Callable):
+    """Detecta e remove alucinações de arquivos (ex: mainn.py se existe main.py)."""
+    if not os.path.isdir(project_path): return
+    
+    files = []
+    for root, _, fnames in os.walk(project_path):
+        for f in fnames:
+            files.append(os.path.join(root, f))
+    
+    # Mapeia nomes base
+    base_names = {}
+    for f in files:
+        name = os.path.basename(f)
+        if name not in base_names:
+            base_names[name] = f
+            
+    # Procura por "quase duplicatas" alucinadas (ex: main.py vs mainn.py)
+    to_delete = []
+    for name, path in base_names.items():
+        # Se o nome tem letras repetidas suspects (ex: nn, tt, ii) e o original existe
+        # mas só fazemos isso para arquivos de código
+        if not name.endswith(".py"): continue
+        
+        # Simplificação: se existe main.py e mainn.py, remove mainn.py
+        # ou se existe settings.py e settiings.py, etc.
+        for clean_name in ["main.py", "app.py", "settings.py", "models.py", "schemas.py"]:
+            if name != clean_name and clean_name in base_names:
+                # Usa regex simples para ver se o nome só difere por repetições
+                # ou se o clean_name é um substring muito próximo
+                from difflib import SequenceMatcher
+                ratio = SequenceMatcher(None, name, clean_name).ratio()
+                if ratio > 0.8: # Muito similar
+                     to_delete.append(path)
+    
+    for path in set(to_delete):
+        try:
+            os.remove(path)
+            log(f"🧹 Sanity Filter: Removida alucinação: {os.path.basename(path)}")
+        except: pass
 
     import subprocess, sys
     try:

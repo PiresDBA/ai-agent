@@ -48,7 +48,7 @@ def main():
     import uvicorn
 
     print("\n" + "="*60)
-    print("  🤖 ANTIGRAVITY AGENT SYSTEM v2.0")
+    print("  🐶 BULLDOG AI v2.2")
     print("="*60)
     print()
 
@@ -67,11 +67,13 @@ def main():
         host="0.0.0.0",
         port=8888,
         reload=True,
-        # LIMITAÇÃO DIAMANTE: Monitora APENAS pastas de código fonte
-        # Nunca monitorar 'workspace', 'github_projects', 'logs' ou 'data'
-        reload_dirs=["api", "core", "engine", "agents", "tools", "dashboard"],
+        # DIAMOND STABILITY: Monitora pastas de código e o arquivo principal
+        reload_dirs=["api", "core", "engine", "agents", "tools", "dashboard", "."],
         log_level="info",
         access_log=True,
+        timeout_keep_alive=600,
+        timeout_graceful_shutdown=60,
+        forwarded_allow_ips="*"
     )
 
 

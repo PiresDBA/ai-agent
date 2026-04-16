@@ -102,5 +102,65 @@
   "quais as principais noticias de hoje? me faça um relatório completo": {
     "route": "B",
     "count": 1
+  },
+  "quais as melhores acoes pa investir hoje": {
+    "route": "B",
+    "count": 1
+  },
+  "me realcione os paises mais populosos, e os mis pobres": {
+    "route": "C",
+    "count": 1
+  },
+  "diga quais os 10 jogadores de futebol mais caros em ordem crescente": {
+    "route": "A",
+    "count": 1
+  },
+  "vamos conversar, me fale quais o jogadores de futebol mais caros do brasil": {
+    "route": "D",
+    "count": 1
+  },
+  "quais as capitais dos etados brasileiro": {
+    "route": "B",
+    "count": 1
+  },
+  "boa noite, me diga quais as raças de cahorro existenes": {
+    "route": "D",
+    "count": 1
+  },
+  "ola, boa noite": {
+    "route": "D",
+    "count": 1
+  },
+  "nao consegui ver sua resposta aqui na tela grafica": {
+    "route": "D",
+    "count": 1
+  },
+  "boa noie, vamos conversar um pouco": {
+    "route": "D",
+    "count": 1
+  },
+  "nao consigo ver a repost": {
+    "route": "B",
+    "count": 1
+  },
+  "ola boa noite": {
+    "route": "D",
+    "count": 1
+  },
+  "vamo criar um jogo de corrida": {
+    "route": "A",
+    "count": 1
+  },
+  "ola noa noite, vamos conversar": {
+    "route": "D",
+    "count": 1
+  },
+  "boa noite": {
+    "route": "D",
+    "count": 1
+  },
+  "vamos falar de futebol": {
+    "route": "D",
+    "count": 1
   }
 }

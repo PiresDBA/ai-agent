@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>💎 Diamond Agent Factory</title>
+<title>🐶 Bulldog AI</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
 <!-- Remarkable for Markdown parsing -->
 <script src="https://cdn.jsdelivr.net/npm/remarkable@2.0.1/dist/remarkable.min.js"></script>
@@ -56,7 +56,7 @@
     align-items: center;
     gap: 14px;
     font-weight: 900;
-    font-size: 1.2rem;
+    font-size: 1.3rem;
     padding: 0.5rem;
     margin-bottom: 2.5rem;
     background: var(--diamond);
@@ -65,10 +65,50 @@
     letter-spacing: -0.5px;
   }
   
-  .brand svg {
-    fill: url(#grad1);
-    width: 24px;
-    height: 24px;
+  .brand-icon {
+    width: 32px;
+    height: 32px;
+    background: white; 
+    mask: url('assets/bulldog_white.png') no-repeat center; 
+    -webkit-mask: url('assets/bulldog_white.png') no-repeat center; 
+    mask-size: 85%; 
+    -webkit-mask-size: 85%;
+    filter: drop-shadow(0 0 8px var(--accent-glow));
+    flex-shrink: 0;
+  }
+
+  /* AGENT SELECTOR */
+  .agent-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .agent-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+  }
+  .agent-item:hover {
+    background: rgba(255,255,255,0.03);
+    color: white;
+  }
+  .agent-item.active {
+    background: rgba(121, 192, 255, 0.08);
+    color: var(--accent);
+    border-color: rgba(121, 192, 255, 0.2);
+    font-weight: 600;
+  }
+  .agent-icon {
+    font-size: 1.1rem;
+    width: 20px;
+    text-align: center;
   }
 
   .new-chat-btn {
@@ -221,13 +261,50 @@
   }
 
   .avatar-user { background: var(--bg-input); border: 1px solid var(--border-light); }
-  .avatar-ai { background: var(--gradient-primary); color: white; box-shadow: 0 0 15px var(--accent-glow); }
+  .avatar-ai { 
+    background: var(--gradient-primary); 
+    box-shadow: 0 0 15px var(--accent-glow);
+    mask: url('assets/bulldog_white.png') no-repeat center; 
+    -webkit-mask: url('assets/bulldog_white.png') no-repeat center; 
+    mask-size: 80%; 
+    -webkit-mask-size: 80%;
+  }
 
   .msg-content {
     flex: 1;
     display: flex;
     flex-direction: column;
     gap: 8px;
+    max-width: 85%;
+  }
+
+  /* CHAT BUBBLES DIAMOND */
+  .bubble {
+    padding: 12px 16px;
+    border-radius: 12px;
+    line-height: 1.5;
+    font-size: 0.95rem;
+    position: relative;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    word-break: break-word;
+  }
+  .bubble-ai { 
+    background: var(--bg-card); 
+    border: 1px solid var(--border);
+    border-top-left-radius: 2px;
+  }
+  .bubble-user { 
+    background: var(--accent); 
+    color: white; 
+    border-top-right-radius: 2px;
+    align-self: flex-end;
+  }
+  
+  .message-user {
+    flex-direction: row-reverse;
+  }
+  .message-user .msg-content {
+    align-items: flex-end;
   }
 
   .user-text {
@@ -266,15 +343,20 @@
   @keyframes spin { to { transform: rotate(360deg); } }
 
   .log-console {
-    background: #000;
+    background: #020202;
     border-radius: 8px;
-    padding: 12px;
+    padding: 16px;
     font-family: 'Fira Code', monospace;
     font-size: 0.85rem;
-    color: #8be9fd;
-    max-height: 250px;
+    color: #a5d6ff;
+    max-height: 450px;
+    height: 400px;
     overflow-y: auto;
-    border: 1px solid #1e1e24;
+    border: 1px solid #333;
+    border-left: 4px solid var(--accent);
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+    position: relative;
+    margin-top: 10px;
   }
   
   .log-line {
@@ -307,27 +389,87 @@
   /* INPUT AREA */
   .input-container {
     padding: 20px 40px;
-    background: linear-gradient(180deg, transparent 0%, var(--bg-dark) 20%);
+    background: linear-gradient(180deg, transparent 0%, var(--bg-dark) 40%);
+    position: sticky;
+    bottom: 0;
+    width: 100%;
+    z-index: 10;
   }
 
   .input-box {
     max-width: 800px;
+    width: 100%;
     margin: 0 auto;
     position: relative;
-    background: var(--bg-input);
-    border: 1px solid var(--border-light);
-    border-radius: 16px;
-    padding: 8px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 12px 16px;
     display: flex;
-    align-items: center;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-    transition: border-color 0.3s;
+    flex-direction: column;
+    box-shadow: var(--shadow-soft);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(12px);
   }
   
   .input-box:focus-within {
     border-color: var(--accent);
-    box-shadow: 0 0 20px var(--accent-glow);
+    box-shadow: 0 0 30px var(--accent-glow);
+    transform: translateY(-2px);
   }
+
+  .input-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .input-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+
+  .control-group {
+    display: flex;
+    gap: 8px;
+  }
+
+  .ui-select {
+    background: #27272a;
+    color: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+    max-width: 200px;
+    outline: none;
+  }
+  .ui-select:hover { border-color: var(--accent); background: #3f3f46; }
+  .ui-select option { background: #27272a; color: white; }
+
+  .voice-btn {
+    background: transparent;
+    color: var(--text-secondary);
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .voice-btn:hover { color: var(--accent); background: rgba(121, 192, 255, 0.1); }
+  .voice-btn.recording { color: #f87171; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 
   textarea {
     flex: 1;
@@ -487,42 +629,57 @@
 </head>
 <body>
 
-  <!-- SVG DEFS -->
   <svg style="display:none">
     <defs>
-      <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" style="stop-color:#4f46e5;stop-opacity:1" />
-        <stop offset="100%" style="stop-color:#38bdf8;stop-opacity:1" />
-      </linearGradient>
+      <symbol id="bulldog-ico" viewBox="0 0 24 24">
+        <!-- Dog Head -->
+        <path d="M12 2C7.58 2 4 5.58 4 10c0 2.21.89 4.21 2.34 5.66L12 22l5.66-6.34C19.11 14.21 20 12.21 20 10c0-4.42-3.58-8-8-8z" fill="#79c0ff"/>
+        <!-- Eyes -->
+        <circle cx="9" cy="10" r="1.5" fill="#050505"/>
+        <circle cx="15" cy="10" r="1.5" fill="#050505"/>
+        <!-- Nose -->
+        <path d="M11 13.5h2v1h-2z" fill="#050505"/>
+        <!-- Ears -->
+        <path d="M5 5.5L3 8l2 1zM19 5.5L21 8l-2 1z" fill="#30363d"/>
+      </symbol>
     </defs>
   </svg>
 
   <aside class="sidebar">
     <div class="brand">
-      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
-      Agent Platform
+      <div class="brand-icon"></div>
+      Bulldogue AI
     </div>
-    
-    <button class="new-chat-btn" onclick="location.reload()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-      Novo Projeto
-    </button>
+
+    <div style="margin-top: 30px; padding: 0 8px;">
+      <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; font-weight: 600;">
+        Centro de Comando
+      </div>
+      <div id="agentSelector" class="agent-menu">
+        <div class="agent-item active" data-agent="auto" title="A Bulldogue AI decide o melhor agente">
+          <span class="agent-icon">🤖</span> Auto
+        </div>
+        <div class="agent-item" data-agent="A" title="Focado em Jogos (Games)">
+          <span class="agent-icon">🎮</span> Games
+        </div>
+        <div class="agent-item" data-agent="B" title="Focado em Aplicações Web (SaaS)">
+          <span class="agent-icon">🌐</span> SaaS
+        </div>
+        <div class="agent-item" data-agent="C" title="Focado em Automação e Tools">
+          <span class="agent-icon">⚙️</span> Automate
+        </div>
+        <div class="agent-item" data-agent="D" title="Focado em Conversa e Instrução">
+          <span class="agent-icon">💬</span> Specialist
+        </div>
+      </div>
+    </div>
     
     <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:8px; font-weight:600; text-transform:uppercase; letter-spacing:1px">Projetos Recentes</div>
     <ul class="history-list" id="historyList">
       <!-- Injected via API -->
     </ul>
     
-    <div class="system-stats">
-      <div class="stat-box">
-        <div class="stat-val" id="statRate">--</div>
-        Sucesso
-      </div>
-      <div class="stat-box">
-        <div class="stat-val" id="statScore">--</div>
-        Qualidade
-      </div>
-    </div>
+    <!-- Diamond UI: Stats removidas conforme solicitado (foco em logs reais) -->
   </aside>
 
   <main class="main-panel">
@@ -530,16 +687,11 @@
       
       <!-- Welcome Message -->
       <div class="message" id="welcomeMsg">
-        <div class="avatar avatar-ai">D</div>
+        <div class="avatar avatar-ai" style="background: white; mask: url('assets/bulldog_white.png') no-repeat center; -webkit-mask: url('assets/bulldog_white.png') no-repeat center; mask-size: contain; -webkit-mask-size: contain;"></div>
         <div class="msg-content">
           <div class="user-text">
-            <h2>Bem-vindo à Fábrica Elite Diamond</h2>
-            <p style="color:var(--text-secondary); margin-top:8px">O sistema foi elevado ao nível <strong>Diamond Professional</strong>. Agora geramos apenas código de alta performance, documentado e com arquitetura industrial.</p>
-            <div style="display:flex; gap:12px; margin-top:20px; flex-wrap:wrap">
-              <button class="open-files-btn" onclick="setInput('Crie um jogo Snake em HTML5 super polido com placar de pontos.')" style="margin:0; font-size:0.85rem">🐍 Jogo Snake</button>
-              <button class="open-files-btn" onclick="setInput('Crie um script automotizado que lê um CSV e gera gráficos de evolução num arquivo PDF.')" style="margin:0; font-size:0.85rem">📊 Script de Dados</button>
-              <button class="open-files-btn" onclick="setInput('Construa um app de gestão de tarefas em FastAPI com Kanban Board completo.')" style="margin:0; font-size:0.85rem">📝 App Kanban</button>
-            </div>
+            <h2>Bem-vindo à Fábrica Bulldogue AI</h2>
+            <p style="color:var(--text-secondary); margin-top:8px">Olá, eu sou a Bulldogue Frida, sua especialista de elite. O sistema foi elevado ao nível <strong>Bulldogue Elite</strong>. Gere código de alta performance com a força de um Bulldogue.</p>
           </div>
         </div>
       </div>
@@ -547,24 +699,33 @@
     </div>
 
     <div class="input-container">
-      <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-        <select id="llmSelect" style="background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-light); padding:4px 8px; border-radius:6px; font-size:0.8rem; cursor:pointer; min-width: 150px;">
-          <option value="">🔮 LLM Automático</option>
-        </select>
-        <select id="modeSelect" style="background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-light); padding:4px 8px; border-radius:6px; font-size:0.8rem; cursor:pointer;">
-          <option value="fast">🚀 Modo Rápido (Fast)</option>
-          <option value="planning">🧠 Modo Planejamento</option>
-        </select>
-      </div>
       <div class="input-box">
-        <textarea id="promptInput" rows="1" placeholder="Descreva o aplicativo, jogo ou automação que você quer criar..."></textarea>
-        <button class="send-btn" id="sendBtn" onclick="submitTask()">
-          <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-        </button>
+        <div class="input-main">
+          <button class="voice-btn" id="voiceBtn" title="Falar tarefa">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+          </button>
+          <textarea id="promptInput" rows="1" placeholder="Fale ou digite sua tarefa..."></textarea>
+          <button class="send-btn" id="sendBtn" onclick="submitTask()">
+            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          </button>
+        </div>
+        <div class="input-footer">
+          <div class="control-group">
+            <select id="llmSelect" class="ui-select"></select>
+            <select id="modeSelect" class="ui-select">
+              <option value="fast">🚀 Modo Rápido (Fast)</option>
+              <option value="planning">🧠 Modo Planejamento</option>
+            </select>
+          </div>
+          <div style="font-size:0.7rem; color:var(--text-secondary); opacity: 0.6">
+            Bulldog AI v2.2 | Industrial Engine
+          </div>
+        </div>
       </div>
-      <div style="font-size:0.7rem; color:var(--text-secondary); text-align:center; margin-top:12px">
-        Respostas e códigos gerados podem conter imprecisões e dependem do modelo Ollama atual. O sistema faz auto-correções para garantir que rode.
+      <div style="font-size:0.7rem; color:var(--text-secondary); text-align:center; margin-top:12px; opacity: 0.5">
+        Respostas e códigos podem conter imprecisões. Rodando via Ollama Local.
       </div>
+    </div>
     </div>
   </main>
 
@@ -592,7 +753,7 @@
       const res = await fetch('/models');
       const data = await res.json();
       const sel = document.getElementById('llmSelect');
-      sel.innerHTML = '<option value="">🔮 Diamond Auto-Select</option>';
+      sel.innerHTML = '<option value="">🔮 Auto-Select</option>';
       
       if (data.models) {
         const locals = data.models.filter(m => m.category === 'Diamond Local');
@@ -600,7 +761,7 @@
         
         if (locals.length) {
           const group = document.createElement('optgroup');
-          group.label = '🏠 LOCAL DIAMOND';
+          group.label = '🏠 LOCAL';
           locals.forEach(m => {
              const opt = document.createElement('option');
              opt.value = m.name;
@@ -626,6 +787,76 @@
   }
   loadModels();
   const mdParser = new remarkable.Remarkable({ html: true, xhtmlOut: true, breaks: true });
+  let chatHistory = []; // Memória Permanente da Sessão (Gold Rule: Contexto)
+
+  function addLog(msg) {
+    const el = document.getElementById('logs');
+    if (!el) return;
+    el.textContent += msg + '\n';
+    el.scrollTop = el.scrollHeight;
+    const chatArea = document.getElementById('chatArea');
+    chatArea.scrollTop = chatArea.scrollHeight;
+  }
+
+  function showResult(result) {
+    const chatArea = document.getElementById('chatArea');
+    const card = document.getElementById('resultCard');
+    
+    // Rota D = Chat simples
+    if (result.route === 'D' || result.message) {
+        const aiMsg = document.createElement('div');
+        aiMsg.className = 'message';
+        aiMsg.innerHTML = `
+          <div class="avatar avatar-ai" style="background: url('assets/bulldog_chat.png'); background-size: cover;"></div>
+          <div class="msg-content">
+            <div class="bubble bubble-ai markdown-body">
+              ${mdParser.render(result.message || 'Bulldog AI pronto para ajudar.')}
+            </div>
+          </div>
+        `;
+        chatArea.appendChild(aiMsg);
+        chatArea.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        return;
+    }
+
+    // Outras rotas = Projeto Técnico
+    card.style.display = 'block';
+    const badge = document.getElementById('statusBadge');
+    const routeBadge = document.getElementById('routeBadge');
+    const pathEl = document.getElementById('projectPath');
+    const scoreEl = document.getElementById('scoreRow');
+    const filesEl = document.getElementById('filesList');
+
+    const statusMap = {
+      'success': ['status-success', '✅ Sucesso'],
+      'partial': ['status-partial', '⚠️ Parcial'],
+      'failed': ['status-failed', '❌ Falhou'],
+    };
+    const [cls, label] = statusMap[result.status] || ['', result.status];
+    badge.className = `status-badge ${cls}`;
+    badge.textContent = label;
+    
+    const routeLabels = { 'A': '🎮 Game', 'B': '🌐 SaaS', 'C': '⚙️ Dev' };
+    routeBadge.textContent = routeLabels[result.route] || result.route || '';
+
+    if (result.project_path) {
+      pathEl.style.display = 'block';
+      pathEl.textContent = '📁 ' + result.project_path;
+    }
+
+    if (result.score) {
+      const pct = Math.round(result.score * 100);
+      scoreEl.innerHTML = `📊 Score: <strong style="color:#38bdf8">${pct}%</strong> &nbsp;|&nbsp; 🔁 Iters: <strong>${result.iterations}</strong>`;
+    }
+
+    if (result.files && result.files.length > 0) {
+      filesEl.innerHTML = `<ul class="files-list">${result.files.map(f => `<li>${f}</li>`).join('')}</ul>`;
+    }
+
+    // Tira o scroll para o fim da conversa
+    chatArea.scrollTop = chatArea.scrollHeight;
+    loadHistory();
+  }
 
   // Adjust textarea height automatically
   const promptInput = document.getElementById('promptInput');
@@ -700,6 +931,7 @@
     document.getElementById('sendBtn').disabled = true;
 
     appendUserMessage(prompt);
+    chatHistory.push({ role: 'user', content: prompt }); // Salva na memória local
     const msgId = createAiWorkspace();
     const logsEl = document.getElementById(`logs_${msgId}`);
     
@@ -720,12 +952,21 @@
     addLog('> Iniciando infraestrutura de agentes...');
 
     try {
-      const llmVal = document.getElementById('llmSelect').value || null;
-      const modeVal = document.getElementById('modeSelect').value || 'fast';
+      const llm = document.getElementById('llmSelect').value;
+      const mode = document.getElementById('modeSelect').value;
+      const activeAgent = document.querySelector('.agent-item.active').dataset.agent;
+      const forced_agent = activeAgent === 'auto' ? null : activeAgent;
+
       const startRes = await fetch('/run/async', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, model: llmVal, mode: modeVal })
+        body: JSON.stringify({ 
+          prompt, 
+          model: llm, 
+          mode, 
+          forced_agent,
+          history: chatHistory // Envia o contexto completo
+        })
       });
       const startData = await startRes.json();
       const taskId = startData.task_id;
@@ -834,16 +1075,21 @@
   }
 
   function finalizeAiMessage(msgId, result) {
-    document.getElementById(`spinner_${msgId}`).style.display = 'none';
+    const spinner = document.getElementById(`spinner_${msgId}`);
+    if (spinner) spinner.style.display = 'none';
+    
     const title = document.getElementById(`title_${msgId}`);
     const resultBox = document.getElementById(`result_${msgId}`);
     document.getElementById('sendBtn').disabled = false;
 
+    const routes = { 'A': 'Game Pronto', 'B': 'SaaS Estável', 'C': 'Automação Pronta', 'D': 'Chat Concluído' };
+    const label = routes[result.route] || 'Bulldog Finalizado';
+
     if (result.status === 'success') {
-      title.innerHTML = '✨ Projeto Finalizado com Sucesso';
+      title.innerHTML = `✨ ${label}`;
       title.style.color = '#4ade80';
     } else {
-      title.innerHTML = '⚠️ Processo Encerrado. Status: ' + result.status;
+      title.innerHTML = '⚠️ Processo Encerrado: ' + result.status;
       title.style.color = '#fb923c';
     }
 
@@ -853,32 +1099,27 @@
        projName = result.project_path.split(/\\|\//).pop();
     }
 
-    resultBox.style.display = 'block';
-    
-    let filesHtml = result.files && result.files.length 
-      ? `<div style="margin-top:20px"><strong style="color:var(--text-secondary);font-size:0.85rem;text-transform:uppercase">Arquivos Gerados</strong>
-         <ul style="list-style:none;margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
-            ${result.files.map(f => `<li style="background:var(--bg-dark);border:1px solid var(--border);padding:6px 12px;border-radius:6px;font-size:0.85rem">📄 ${f}</li>`).join('')}
-         </ul></div>`
-      : '';
-
-    let scoreVal = result.score ? Math.round(result.score * 100) + '%' : 'N/A';
+    // FIX: Render message bubble for Route D or any message payload
+    if (result.message) {
+      const chatArea = document.getElementById('chatArea');
+      const aiMsg = document.createElement('div');
+      aiMsg.className = 'message';
+      aiMsg.innerHTML = `
+        <div class="avatar avatar-ai"></div>
+        <div class="msg-content">
+          <div class="bubble bubble-ai markdown-body">
+            ${mdParser.render(result.message)}
+          </div>
+        </div>
+      `;
+      chatArea.appendChild(aiMsg);
+      aiMsg.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      
+      // Salva a resposta da Frida na memória para o próximo turno
+      chatHistory.push({ role: 'assistant', content: result.message });
+    }
 
     resultBox.innerHTML = `
-      <div class="result-grid">
-        <div class="result-metric">
-          <div class="metric-label">Diretório</div>
-          <div class="metric-val" style="font-size:0.9rem;word-break:break-all">${projName || 'Falha'}</div>
-        </div>
-        <div class="result-metric">
-          <div class="metric-label">Agente</div>
-          <div class="metric-val text-accent">${result.agent || result.route || 'Local'}</div>
-        </div>
-        <div class="result-metric">
-          <div class="metric-label">Quality Score</div>
-          <div class="metric-val ${result.status === 'success' ? 'success' : ''}">${scoreVal}</div>
-        </div>
-      </div>
       ${filesHtml}
       ${projName ? `<button class="open-files-btn" onclick="openSidebarFiles('${projName}')">Abrir Editor / Arquivos</button>` : ''}
     `;
@@ -1019,6 +1260,39 @@
       document.getElementById('statScore').textContent = ((sData.average_score || 0) * 100).toFixed(0) + '%';
 
     } catch (e) {}
+  }
+
+  // Agent Selector Logic
+  document.querySelectorAll('.agent-item').forEach(item => {
+    item.onclick = () => {
+      document.querySelectorAll('.agent-item').forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+    };
+  });
+
+  // Voice Logic
+  const voiceBtn = document.getElementById('voiceBtn');
+  if ('webkitSpeechRecognition' in window) {
+    const recognition = new webkitSpeechRecognition();
+    recognition.lang = 'pt-BR';
+    recognition.continuous = false;
+    
+    voiceBtn.onclick = () => {
+      recognition.start();
+      voiceBtn.classList.add('recording');
+    };
+    
+    recognition.onresult = (event) => {
+      const text = event.results[0][0].transcript;
+      promptInput.value = text;
+      voiceBtn.classList.remove('recording');
+      promptInput.dispatchEvent(new Event('input'));
+    };
+    
+    recognition.onerror = () => voiceBtn.classList.remove('recording');
+    recognition.onend = () => voiceBtn.classList.remove('recording');
+  } else {
+    voiceBtn.style.display = 'none';
   }
 
   // init

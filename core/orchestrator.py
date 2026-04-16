@@ -1,12 +1,13 @@
 """
-Orquestrador Inteligente v5 — Sistema de roteamento multi-camada.
+Orquestrador Inteligente v5 — O Cérebro do Sistema.
+Identidade: Você pensa, decide, delega e garante que o trabalho seja feito pelo agente certo.
 
-Hierarquia de decisão:
-  1. Memória de aprendizado (tarefa idêntica anterior)
-  2. Regras fixas (keywords explícitas)
-  3. Similaridade semântica
-  4. LLM como árbitro final
-  5. Fallback seguro (C = Dev)
+PROTOCOLOS OBRIGATÓRIOS:
+1. ENTENDER: Identificar intenção real vs literal.
+2. CLASSIFICAR: Mapear para Games, App, Automation ou Chat.
+3. PLANEJAR: Definir ordem e critérios de sucesso.
+4. CONTEXTUALIZAR: Delegar com histórico e objetivos completos.
+5. CONSOLIDAR: Unificar resultados em uma saída coesa.
 """
 import json
 import os
@@ -37,6 +38,15 @@ ROUTES_KB = {
         "git", "clone", "script", "automation", "automação", "refactor",
         "tooling", "cli", "bot", "crawler", "scraper", "etl", "pipeline",
         "processamento", "conversão", "arquivo", "pdf", "excel", "csv"
+    ],
+    "D": [
+        "quem é", "paises", "população", "ações", "notícias", "chat", "oi", "bom dia",
+        "boa tarde", "boa noite", "ajuda", "clima", "tempo", "diferença", "explicar",
+        "resumo", "conversa", "olá", "tudo bem", "stats", "estatística", "conversar",
+        "falaremos", "falar", "responda", "me diga", "quem", "quanto", "lista",
+        "amigo", "conhece", "você", "entende", "sabe", "bom dia", "boa tarde",
+        "neymar", "messi", "cristiano", "futebol", "esporte", "biografia", "fama",
+        "história", "curiosidades", "pergunta", "fale sobre", "explica", "quem foi"
     ]
 }
 
@@ -127,16 +137,34 @@ def _semantic_router(text: str) -> tuple[str, float]:
 # LLM ROUTER — árbitro final
 # ===================================================
 def _llm_router(text: str) -> tuple[str | None, float]:
-    prompt = f"""Classifique a intenção do usuário em UMA das categorias:
+    prompt = f"""IDENTIDADE:
+Você é o Orquestrador, o agente central e mais importante do sistema.
+Você não executa tarefas diretamente. Você pensa, decide, delega e garante que o trabalho seja feito pelo agente certo.
 
-A = GAME (jogos, simuladores, entretenimento interativo)
-B = SAAS (apps web, dashboards, sistemas, APIs, e-commerce)
-C = DEV (scripts, automação, ferramentas CLI, processamento de dados)
+AGENTES SOB SEU COMANDO:
+→ GAMES AGENT: Jogos, mecânicas, física de jogo, NPCs.
+→ APP AGENT: Telas, UI/UX, fluxos de usuário, mobile/web features.
+→ AUTOMATION AGENT: Scripts, bots, pipelines, integrações, webhooks.
+→ CHAT AGENT (BULLDOG FRIDA): Conversas, dúvidas, triagem, explicações.
 
-Usuário quer: {text}
+PROTOCOLO DE DECISÃO:
+1. ENTENDER: O que o usuário realmente quer?
+2. CLASSIFICAR: Identifique o agente (A, B, C ou D).
+3. PLANEJAR: Monte a ordem se houver múltiplas tarefas.
 
-Responda SOMENTE com JSON válido, sem texto extra:
-{{"route": "A", "confidence": 0.95, "reason": "motivo breve"}}"""
+PROTOCOLO DE AMBIGUIDADE:
+Se for vago, NÃO escolha. Peça esclarecimento: "Para eu direcionar isso corretamente, preciso entender: [UMA pergunta específica]".
+
+TAREFA DO USUÁRIO: {text}
+
+Responda SOMENTE com JSON válido:
+{{
+  "route": "A/B/C/D", 
+  "confidence": 0.99, 
+  "reason": "motivo", 
+  "is_ambiguous": false,
+  "clarification_question": ""
+}}"""
 
     raw = ask("router", prompt, timeout=30)
 
@@ -144,7 +172,7 @@ Responda SOMENTE com JSON válido, sem texto extra:
         data = safe_json_load(raw)
         route = data.get("route", "").upper()
         conf = float(data.get("confidence", 0))
-        if route in ("A", "B", "C"):
+        if route in ("A", "B", "C", "D"):
             return route, conf
     except Exception:
         pass
@@ -158,7 +186,7 @@ Responda SOMENTE com JSON válido, sem texto extra:
 def smart_route(text: str) -> RouteDecision:
     # 1. Memória de aprendizado amplo (task memory)
     hint = get_best_route_hint(text)
-    if hint and hint in ("A", "B", "C"):
+    if hint and hint in ("A", "B", "C", "D"):
         return RouteDecision(route=hint, confidence=0.99, reason="task_memory")
 
     # 2. Memória local do router
@@ -193,8 +221,12 @@ def _cached_route(text: str) -> RouteDecision:
     return smart_route(text)
 
 
-def route(text: str, use_cache: bool = True) -> RouteDecision:
+def route(text: str, use_cache: bool = True, forced_route: str = None) -> RouteDecision:
     """Entrypoint principal do orquestrador."""
+    # 0. Manual Override (Gold Rule: User Choice First)
+    if forced_route and forced_route in ("A", "B", "C", "D"):
+        return RouteDecision(route=forced_route, confidence=1.0, reason="manual_override")
+
     if use_cache:
         return _cached_route(text)
     return smart_route(text)

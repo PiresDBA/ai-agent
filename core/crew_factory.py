@@ -8,6 +8,10 @@ from core.llm import get_crewai_llm
 
 # Configura o endpoint do Ollama para o LiteLLM interno do CrewAI
 os.environ["OLLAMA_API_BASE"] = "http://127.0.0.1:11434"
+# Diamond Stability: Aumenta o timeout global do LiteLLM (em segundos)
+os.environ["LITELLM_REQUEST_TIMEOUT"] = "600"
+os.environ["LITELLM_RETRY_DELAY"] = "2"
+os.environ["LITELLM_NUM_RETRIES"] = "3"
 
 class DiamondCrew:
     @staticmethod

@@ -7,7 +7,7 @@ from typing import Literal, Optional
 
 class RouteDecision(BaseModel):
     """Decisão do orquestrador sobre para qual agente rotear."""
-    route: Literal["A", "B", "C"]
+    route: Literal["A", "B", "C", "D"]
     confidence: float = Field(ge=0.0, le=1.0)
     reason: str = ""
 

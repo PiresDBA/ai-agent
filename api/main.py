@@ -4,6 +4,7 @@ FastAPI com WebSocket streaming, CORS, e endpoints completos.
 """
 import os
 import asyncio
+import sys
 import uuid
 import multiprocessing
 import queue as py_queue
@@ -26,8 +27,29 @@ _active_processes = {} # task_id -> Process
 _task_logs = {}
 _active_tasks = {}
 
-def pipeline_worker(task_id, task_text, user_id, model, mode, log_queue):
+class StdoutRedirector:
+    def __init__(self, queue):
+        self.queue = queue
+        self.terminal = sys.__stdout__ # Salva o terminal original
+
+    def write(self, message):
+        if message:
+            # TEE: Escreve no terminal real (Gold Rule)
+            self.terminal.write(message)
+            self.terminal.flush()
+            
+            # Envia para a queue do Dashboard
+            if message.strip():
+                self.queue.put(message.strip())
+    def flush(self):
+        pass
+
+def pipeline_worker(task_id, task_text, user_id, model, mode, log_queue, forced_agent=None, history=None):
     """Worker que roda em processo isolado para permitir interrupção real."""
+    import sys
+    # Redireciona stdout para a queue de logs (Visualização Real-time no Dashboard)
+    sys.stdout = StdoutRedirector(log_queue)
+    
     try:
         # Import tardio para evitar lock circular
         from engine.pipeline import run_pipeline
@@ -35,9 +57,10 @@ def pipeline_worker(task_id, task_text, user_id, model, mode, log_queue):
             task=task_text,
             user_id=user_id,
             model=model,
-            mode=mode,
             task_id=task_id,
-            log_queue=log_queue
+            log_queue=log_queue,
+            forced_agent=forced_agent,
+            history=history
         )
         log_queue.put({"__type__": "RESULT", "data": result})
     except Exception as e:
@@ -52,9 +75,9 @@ from core.llm import get_available_models, invalidate_model_cache, classify_mode
 # APP CONFIG
 # ===================================================
 app = FastAPI(
-    title="🤖 Antigravity Agent System",
-    description="Sistema de agentes autônomos com Ollama — cria jogos, apps e scripts sob demanda.",
-    version="2.0.0",
+    title="🐶 Bulldog AI",
+    description="Sistema de agentes autônomos Bulldog — cria jogos, apps e scripts sob demanda.",
+    version="2.1.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -75,6 +98,8 @@ class RunRequest(BaseModel):
     user_id: Optional[str] = None
     model: Optional[str] = None
     mode: Optional[str] = "fast"
+    forced_agent: Optional[str] = None
+    history: Optional[list] = []
 
 class RunResponse(BaseModel):
     status: str
@@ -124,6 +149,10 @@ async def health():
         "version": "2.0.0"
     }
 
+# Mount assets properly (Gold Rule: Fix 404)
+from fastapi.staticfiles import StaticFiles
+app.mount("/assets", StaticFiles(directory="dashboard/assets"), name="assets")
+
 
 @app.post("/run", response_model=RunResponse)
 async def run(payload: RunRequest, background_tasks: BackgroundTasks):
@@ -168,7 +197,7 @@ async def run_async(payload: RunRequest, background_tasks: BackgroundTasks):
     # Inicia processo agressivo
     p = multiprocessing.Process(
         target=pipeline_worker,
-        args=(task_id, payload.prompt.strip(), payload.user_id, payload.model, payload.mode, log_queue)
+        args=(task_id, payload.prompt.strip(), payload.user_id, payload.model, payload.mode, log_queue, payload.forced_agent, payload.history)
     )
     p.start()
     _active_processes[task_id] = p
@@ -252,7 +281,7 @@ async def websocket_task(websocket: WebSocket, task_id: str):
     await websocket.accept()
 
     sent_idx = 0
-    max_wait = 300  # 5 minutos máximo
+    max_wait = 1200  # Diamond Timeout: 20 minutos máximo
 
     try:
         for _ in range(max_wait * 10):  # poll a cada 100ms
@@ -374,12 +403,13 @@ def _default_home_html():
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🤖 Antigravity Agent System</title>
+<title>🐶 Bulldog AI</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Inter', system-ui, sans-serif; background: #0a0f1e; color: #e2e8f0; min-height: 100vh; }
   .hero { background: linear-gradient(135deg, #0a0f1e 0%, #1a1f35 50%, #0d1b2a 100%); padding: 60px 20px; text-align: center; border-bottom: 1px solid #1e293b; }
   .badge { display: inline-block; background: #1e293b; color: #38bdf8; padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-bottom: 20px; border: 1px solid #334155; }
+  .badge-icon { width:36px; height:36px; background: white; mask: url('assets/bulldog_white.png') no-repeat center; -webkit-mask: url('assets/bulldog_white.png') no-repeat center; mask-size: contain; -webkit-mask-size: contain; filter: drop-shadow(0 0 8px var(--accent-glow)); }
   h1 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 800; background: linear-gradient(135deg, #38bdf8, #818cf8, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 16px; }
   .subtitle { color: #94a3b8; font-size: 1.1rem; max-width: 600px; margin: 0 auto 40px; line-height: 1.6; }
   .container { max-width: 1100px; margin: 0 auto; padding: 40px 20px; }
@@ -417,14 +447,20 @@ def _default_home_html():
   .path-display { background: #0f172a; border: 1px solid #1e293b; border-radius: 8px; padding: 12px; font-family: monospace; font-size: 0.9rem; color: #38bdf8; word-break: break-all; }
   a { color: #38bdf8; text-decoration: none; }
   a:hover { text-decoration: underline; }
+  .message { display: flex; gap: 16px; margin-bottom: 20px; }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; }
+  .avatar-ai { background: #38bdf8; }
+  .msg-content { flex: 1; }
+  .user-text { background: #1e293b; padding: 16px; border-radius: 12px; }
+  .open-files-btn { background: #38bdf8; color: #0a0f1e; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
 </style>
 </head>
 <body>
 
 <div class="hero">
-  <div class="badge">⚡ Powered by Ollama + Local GPU</div>
-  <h1>🤖 Antigravity Agents</h1>
-  <p class="subtitle">Sistema de agentes autônomos que cria jogos, aplicações web e scripts sob demanda — tudo rodando na sua máquina.</p>
+  <div class="badge"><div class="badge-icon"></div> 🐶 Powered by Bulldog AI + Local GPU</div>
+  <h1>🐶 Bulldog AI Agent</h1>
+  <p class="subtitle">O sistema autônomo mais robusto do mundo. Criamos software industrial sob demanda — tudo rodando na sua máquina.</p>
 </div>
 
 <div class="container">
@@ -440,9 +476,20 @@ def _default_home_html():
     </div>
     <div class="examples">
       <span style="color:#64748b;font-size:12px;align-self:center">Exemplos:</span>
-      <button class="example-btn" onclick="setPrompt('Crie um jogo snake em Python com pygame')">🐍 Jogo Snake</button>
-      <button class="example-btn" onclick="setPrompt('Crie um jogo tetris em HTML5 com JavaScript')">🟦 Tetris HTML5</button>
-      <button class="example-btn" onclick="setPrompt('Crie um dashboard de gestão de tarefas com FastAPI')">📊 Dashboard</button>
+      <div class="message" id="welcomeMsg">
+        <div class="avatar avatar-ai" style="background: white; mask: url('assets/bulldog_white.png') no-repeat center; -webkit-mask: url('assets/bulldog_white.png') no-repeat center; mask-size: contain; -webkit-mask-size: contain;"></div>
+        <div class="msg-content">
+          <div class="user-text">
+            <h2>Bem-vindo à Fábrica Bulldog AI</h2>
+            <p style="color:var(--text-secondary); margin-top:8px">Olá, eu sou a Bulldog Frida. O sistema foi elevado ao nível <strong>Bulldog Elite</strong>. Gere código de alta performance com a força de um Bulldog.</p>
+            <div style="display:flex; gap:12px; margin-top:20px; flex-wrap:wrap">
+              <button class="open-files-btn" onclick="setPrompt('Crie um jogo Snake em HTML5 super polido com placar de pontos.')" style="margin:0; font-size:0.85rem">🐍 Jogo Snake</button>
+              <button class="open-files-btn" onclick="setPrompt('Crie um script automotizado que lê um CSV e gera gráficos de evolução num arquivo PDF.')" style="margin:0; font-size:0.85rem">📊 Script de Dados</button>
+              <button class="open-files-btn" onclick="setPrompt('Construa um app de gestão de tarefas em FastAPI com Kanban Board completo.')" style="margin:0; font-size:0.85rem">📝 App Kanban</button>
+            </div>
+          </div>
+        </div>
+      </div>
       <button class="example-btn" onclick="setPrompt('Crie um script que lista e organiza arquivos por extensão')">📁 Org. Arquivos</button>
       <button class="example-btn" onclick="setPrompt('Crie um jogo de plataforma 2D simples em pygame')">🎮 Plataforma 2D</button>
       <button class="example-btn" onclick="setPrompt('Crie uma calculadora web com histórico de operações')">🔢 Calculadora</button>
@@ -459,31 +506,12 @@ def _default_home_html():
   <!-- RESULT -->
   <div class="card result" id="resultCard">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <div class="card-title" style="margin:0">✅ Resultado</div>
-      <div>
+        <div class="avatar avatar-ai" style="background: white; mask: url('assets/bulldog_white.png') no-repeat center; -webkit-mask: url('assets/bulldog_white.png') no-repeat center; mask-size: contain; -webkit-mask-size: contain;"></div>
         <span class="status-badge" id="statusBadge"></span>
-        <span class="route-badge" id="routeBadge" style="margin-left:8px"></span>
       </div>
     </div>
     <div id="projectPath" class="path-display" style="margin-bottom:16px;display:none"></div>
-    <div id="scoreRow" style="margin-bottom:12px;color:#94a3b8;font-size:0.9rem"></div>
     <div id="filesList"></div>
-  </div>
-
-  <!-- STATS -->
-  <div class="grid-3">
-    <div class="stat-card" id="statTotal">
-      <div class="stat-number">—</div>
-      <div class="stat-label">Total de Tarefas</div>
-    </div>
-    <div class="stat-card" id="statRate">
-      <div class="stat-number">—</div>
-      <div class="stat-label">Taxa de Sucesso</div>
-    </div>
-    <div class="stat-card" id="statScore">
-      <div class="stat-number">—</div>
-      <div class="stat-label">Score Médio</div>
-    </div>
   </div>
 
   <div style="text-align:center;margin-top:30px;color:#334155;font-size:0.85rem">
@@ -496,6 +524,7 @@ def _default_home_html():
 
 <script>
 let ws = null;
+let history = [];
 
 function setPrompt(text) {
   document.getElementById('prompt').value = text;
@@ -517,17 +546,16 @@ async function runTask() {
   logsCard.style.display = 'block';
   logsEl.style.display = 'block';
   logsEl.textContent = '';
-  spinner.style.display = 'block';
   resultCard.style.display = 'none';
+  spinner.style.display = 'block';
 
-  addLog('🚀 Iniciando tarefa...');
+  history.push({role: 'user', content: prompt});
 
   try {
-    // Inicia tarefa assíncrona
     const startRes = await fetch('/run/async', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt })
+      body: JSON.stringify({ prompt, history })
     });
     const startData = await startRes.json();
     const taskId = startData.task_id;
@@ -592,22 +620,43 @@ function pollResult(taskId, btn, spinner) {
 
 function addLog(msg) {
   const el = document.getElementById('logs');
+  if (!el) return;
   el.textContent += msg + '\n';
   el.scrollTop = el.scrollHeight;
+  
+  const chatArea = document.getElementById('chatArea');
+  if (chatArea) chatArea.scrollTop = chatArea.scrollHeight;
 }
 
 function showResult(result) {
   const card = document.getElementById('resultCard');
   const badge = document.getElementById('statusBadge');
-  const routeBadge = document.getElementById('routeBadge');
   const pathEl = document.getElementById('projectPath');
-  const scoreEl = document.getElementById('scoreRow');
   const filesEl = document.getElementById('filesList');
+  const chatArea = document.getElementById('chatArea') || document.body;
 
+  // ROUTE D / CHAT MESSAGE
+  if (result.route === 'D' || result.message) {
+    const aiMsg = document.createElement('div');
+    aiMsg.className = 'message';
+    aiMsg.innerHTML = `
+      <div class="avatar avatar-ai">🐶</div>
+      <div class="msg-content">
+        <div class="bubble bubble-ai">
+          ${new Remarkable().render(result.message || 'Tarefa Bulldog concluída.')}
+        </div>
+      </div>
+    `;
+    chatArea.appendChild(aiMsg);
+    chatArea.scrollTop = chatArea.scrollHeight;
+    return;
+  }
+
+  // PROJECT GENERATION (A/B/C)
   card.style.display = 'block';
 
   const statusMap = {
-    'success': ['status-success', '✅ Sucesso'],
+    'success': ['status-success', '✅ Sucesso Bulldog'],
     'partial': ['status-partial', '⚠️ Parcial'],
     'failed': ['status-failed', '❌ Falhou'],
   };
@@ -615,25 +664,17 @@ function showResult(result) {
   badge.className = `status-badge ${cls}`;
   badge.textContent = label;
 
-  const routeLabels = { A: '🎮 Game Agent', B: '🌐 SaaS Agent', C: '⚙️ Dev Agent' };
-  routeBadge.className = `route-badge route-${result.route}`;
-  routeBadge.textContent = routeLabels[result.route] || result.route || '';
-
   if (result.project_path) {
     pathEl.style.display = 'block';
     pathEl.textContent = '📁 ' + result.project_path;
   }
 
-  if (result.score) {
-    const pct = Math.round(result.score * 100);
-    scoreEl.innerHTML = `📊 Score de qualidade: <strong style="color:#38bdf8">${pct}%</strong> &nbsp;|&nbsp; 🔁 Iterações: <strong>${result.iterations}</strong>`;
-  }
-
   if (result.files && result.files.length > 0) {
-    filesEl.innerHTML = `<p style="color:#94a3b8;margin-bottom:8px;font-size:0.9rem">📁 ${result.files.length} arquivo(s) gerado(s):</p>
+    filesEl.innerHTML = `<p style="color:#94a3b8;margin-bottom:8px;font-size:0.9rem">📂 ${result.files.length} arquivo(s) prontos:</p>
     <ul class="files-list">${result.files.map(f => `<li>${f}</li>`).join('')}</ul>`;
   }
 
+  chatArea.scrollTop = chatArea.scrollHeight;
   loadStats();
 }
 

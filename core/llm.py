@@ -134,7 +134,7 @@ def _call_ollama_raw(model: str, agent: str, prompt: str, timeout: int = 180) ->
     }
 
     with _ollama_lock:
-        response = requests.post(OLLAMA_URL, json=payload, timeout=timeout)
+        response = requests.post(OLLAMA_URL, json=payload, timeout=timeout or 600)
 
     response.raise_for_status()
     data = response.json()
@@ -146,7 +146,7 @@ def _call_ollama_raw(model: str, agent: str, prompt: str, timeout: int = 180) ->
     return result
 
 
-def ask(agent: str, prompt: str, model: str = None, timeout: int = 300) -> str:
+def ask(agent: str, prompt: str, model: str = None, timeout: int = 600) -> str:
     """
     Interface principal para chamar LLMs via Ollama.
     
@@ -154,7 +154,7 @@ def ask(agent: str, prompt: str, model: str = None, timeout: int = 300) -> str:
         agent: Nome/papel do agente (ex: "game_agent", "fixer")
         prompt: Prompt para o modelo
         model: Modelo específico a usar (opcional, usa fallback automático)
-        timeout: Timeout em segundos (padrão 180s)
+        timeout: Timeout em segundos (padrão Diamond 600s)
     
     Returns:
         Resposta do modelo como string, ou "" em caso de falha total.
@@ -199,7 +199,7 @@ def ask(agent: str, prompt: str, model: str = None, timeout: int = 300) -> str:
 
 
 def ask_with_system(agent: str, system_prompt: str, user_prompt: str,
-                    model: str = None, timeout: int = 180) -> str:
+                    model: str = None, timeout: int = 600) -> str:
     """
     Versão com system prompt separado (melhor para modelos que suportam).
     Combina system + user num único prompt para compatibilidade universal.
