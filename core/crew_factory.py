@@ -18,12 +18,21 @@ class DiamondCrew:
     def create_technical_crew(task_description: str, model_name: str = None):
         """Cria um time de elite com 2 agentes para resolver tarefas complexas."""
         llm = get_crewai_llm(model_name)
+        
+        contract_text = ""
+        try:
+            contract_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "CONTRATO.md")
+            if os.path.exists(contract_path):
+                with open(contract_path, "r", encoding="utf-8") as f:
+                    contract_text = f"\n\n=== CONTRATO DE OPERAÇÃO OBRIGATÓRIO ===\n" + f.read()
+        except Exception:
+            pass
 
         # 1. Agente Arquiteto (Líder Técnico)
         architect = Agent(
             role='Technical Architect',
             goal=f'Plan and design the elite solution for: {task_description}',
-            backstory='You are a Diamond-level Tech Lead. You focus on architecture, structure, and quality standards.',
+            backstory=f'You are a Diamond-level Tech Lead. You focus on architecture, structure, and quality standards.{contract_text}',
             llm=llm,
             verbose=True,
             allow_delegation=False
@@ -33,7 +42,7 @@ class DiamondCrew:
         developer = Agent(
             role='Senior Developer',
             goal=f'Implement the full logic and tests for: {task_description}',
-            backstory='You are a world-class coder. You write Clean Code, robust logic, and mandatory test suites.',
+            backstory=f'You are a world-class coder. You write Clean Code, robust logic, and mandatory test suites.{contract_text}',
             llm=llm,
             verbose=True,
             allow_delegation=False
